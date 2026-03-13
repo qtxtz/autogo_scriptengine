@@ -52,7 +52,7 @@
 ## 安装
 
 ```bash
-go get github.com/ZingYao/autogo_scriptengine
+go get github.com/ZingYao/autogo_scriptengine@v0.0.5
 ```
 
 ## 快速开始
