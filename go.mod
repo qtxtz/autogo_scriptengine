@@ -14,3 +14,5 @@ require (
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	golang.org/x/text v0.3.8 // indirect
 )
+
+replace github.com/Dasongzi1366/AutoGo => ./AutoGo
