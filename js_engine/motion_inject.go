@@ -190,7 +190,11 @@ func injectMotionMethods(engine *JSEngine) {
 
 	vm.Set("keyAction", func(call goja.FunctionCall) goja.Value {
 		code := int(call.Argument(0).ToInteger())
-		motion.KeyAction(code)
+		displayId := 0
+		if len(call.Arguments) > 1 {
+			displayId = int(call.Argument(1).ToInteger())
+		}
+		motion.KeyAction(code, displayId)
 		return goja.Undefined()
 	})
 
