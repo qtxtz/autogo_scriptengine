@@ -116,10 +116,10 @@ func registerImagesLuaFunctions(engine *LuaEngine) {
 		colorStr := L.CheckString(5)
 		sim := float32(L.CheckNumber(6))
 		dir := 0
-		displayId := 0
 		if L.GetTop() >= 7 {
 			dir = L.CheckInt(7)
 		}
+		displayId := 0
 		if L.GetTop() >= 8 {
 			displayId = L.CheckInt(8)
 		}
@@ -165,10 +165,10 @@ func registerImagesLuaFunctions(engine *LuaEngine) {
 		colors := L.CheckString(5)
 		sim := float32(L.CheckNumber(6))
 		dir := 0
-		displayId := 0
 		if L.GetTop() >= 7 {
 			dir = L.CheckInt(7)
 		}
+		displayId := 0
 		if L.GetTop() >= 8 {
 			displayId = L.CheckInt(8)
 		}

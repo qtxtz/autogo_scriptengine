@@ -17,7 +17,7 @@ func injectImagesMethods(engine *JSEngine) {
 		x := int(call.Argument(0).ToInteger())
 		y := int(call.Argument(1).ToInteger())
 		displayId := 0
-		if len(call.Arguments) > 2 {
+		if len(call.Arguments) >= 3 {
 			displayId = int(call.Argument(2).ToInteger())
 		}
 		result := images.Pixel(x, y, displayId)
@@ -30,7 +30,7 @@ func injectImagesMethods(engine *JSEngine) {
 		x2 := int(call.Argument(2).ToInteger())
 		y2 := int(call.Argument(3).ToInteger())
 		displayId := 0
-		if len(call.Arguments) > 4 {
+		if len(call.Arguments) >= 5 {
 			displayId = int(call.Argument(4).ToInteger())
 		}
 		result := images.CaptureScreen(x1, y1, x2, y2, displayId)
@@ -46,7 +46,7 @@ func injectImagesMethods(engine *JSEngine) {
 		colorStr := call.Argument(2).String()
 		sim := float32(call.Argument(3).ToFloat())
 		displayId := 0
-		if len(call.Arguments) > 4 {
+		if len(call.Arguments) >= 5 {
 			displayId = int(call.Argument(4).ToInteger())
 		}
 		result := images.CmpColor(x, y, colorStr, sim, displayId)
@@ -60,19 +60,16 @@ func injectImagesMethods(engine *JSEngine) {
 		y2 := int(call.Argument(3).ToInteger())
 		colorStr := call.Argument(4).String()
 		sim := float32(call.Argument(5).ToFloat())
-		dir := 0
+		dir := int(call.Argument(6).ToInteger())
 		displayId := 0
-		if len(call.Arguments) > 6 {
-			dir = int(call.Argument(6).ToInteger())
-		}
-		if len(call.Arguments) > 7 {
+		if len(call.Arguments) >= 8 {
 			displayId = int(call.Argument(7).ToInteger())
 		}
 		x, y := images.FindColor(x1, y1, x2, y2, colorStr, sim, dir, displayId)
-		arr := vm.NewArray()
-		arr.Set("0", x)
-		arr.Set("1", y)
-		return arr
+		result := vm.NewObject()
+		result.Set("x", x)
+		result.Set("y", y)
+		return vm.ToValue(result)
 	})
 
 	imagesObj.Set("getColorCountInRegion", func(call goja.FunctionCall) goja.Value {
@@ -83,7 +80,7 @@ func injectImagesMethods(engine *JSEngine) {
 		colorStr := call.Argument(4).String()
 		sim := float32(call.Argument(5).ToFloat())
 		displayId := 0
-		if len(call.Arguments) > 6 {
+		if len(call.Arguments) >= 7 {
 			displayId = int(call.Argument(6).ToInteger())
 		}
 		result := images.GetColorCountInRegion(x1, y1, x2, y2, colorStr, sim, displayId)
@@ -94,7 +91,7 @@ func injectImagesMethods(engine *JSEngine) {
 		colors := call.Argument(0).String()
 		sim := float32(call.Argument(1).ToFloat())
 		displayId := 0
-		if len(call.Arguments) > 2 {
+		if len(call.Arguments) >= 3 {
 			displayId = int(call.Argument(2).ToInteger())
 		}
 		result := images.DetectsMultiColors(colors, sim, displayId)
@@ -108,19 +105,16 @@ func injectImagesMethods(engine *JSEngine) {
 		y2 := int(call.Argument(3).ToInteger())
 		colors := call.Argument(4).String()
 		sim := float32(call.Argument(5).ToFloat())
-		dir := 0
+		dir := int(call.Argument(6).ToInteger())
 		displayId := 0
-		if len(call.Arguments) > 6 {
-			dir = int(call.Argument(6).ToInteger())
-		}
-		if len(call.Arguments) > 7 {
+		if len(call.Arguments) >= 8 {
 			displayId = int(call.Argument(7).ToInteger())
 		}
 		x, y := images.FindMultiColors(x1, y1, x2, y2, colors, sim, dir, displayId)
-		arr := vm.NewArray()
-		arr.Set("0", x)
-		arr.Set("1", y)
-		return arr
+		result := vm.NewObject()
+		result.Set("x", x)
+		result.Set("y", y)
+		return vm.ToValue(result)
 	})
 
 	imagesObj.Set("readFromPath", func(call goja.FunctionCall) goja.Value {
@@ -265,24 +259,24 @@ func injectImagesMethods(engine *JSEngine) {
 		return goja.Null()
 	})
 
-	engine.RegisterMethod("images.pixel", "获取指定坐标的像素颜色", func(x, y, displayId int) string { return images.Pixel(x, y, displayId) }, true)
-	engine.RegisterMethod("images.captureScreen", "截取屏幕", func(x1, y1, x2, y2, displayId int) *image.NRGBA {
-		return images.CaptureScreen(x1, y1, x2, y2, displayId)
+	engine.RegisterMethod("images.pixel", "获取指定坐标的像素颜色", func(x, y int) string { return images.Pixel(x, y, 0) }, true)
+	engine.RegisterMethod("images.captureScreen", "截取屏幕", func(x1, y1, x2, y2 int) *image.NRGBA {
+		return images.CaptureScreen(x1, y1, x2, y2, 0)
 	}, true)
-	engine.RegisterMethod("images.cmpColor", "比较颜色", func(x, y int, colorStr string, sim float32, displayId int) bool {
-		return images.CmpColor(x, y, colorStr, sim, displayId)
+	engine.RegisterMethod("images.cmpColor", "比较颜色", func(x, y int, colorStr string, sim float32) bool {
+		return images.CmpColor(x, y, colorStr, sim, 0)
 	}, true)
-	engine.RegisterMethod("images.findColor", "查找颜色", func(x1, y1, x2, y2 int, colorStr string, sim float32, dir, displayId int) (int, int) {
-		return images.FindColor(x1, y1, x2, y2, colorStr, sim, dir, displayId)
+	engine.RegisterMethod("images.findColor", "查找颜色", func(x1, y1, x2, y2 int, colorStr string, sim float32, dir int) (int, int) {
+		return images.FindColor(x1, y1, x2, y2, colorStr, sim, dir, 0)
 	}, true)
-	engine.RegisterMethod("images.getColorCountInRegion", "获取区域内指定颜色的数量", func(x1, y1, x2, y2 int, colorStr string, sim float32, displayId int) int {
-		return images.GetColorCountInRegion(x1, y1, x2, y2, colorStr, sim, displayId)
+	engine.RegisterMethod("images.getColorCountInRegion", "获取区域内指定颜色的数量", func(x1, y1, x2, y2 int, colorStr string, sim float32) int {
+		return images.GetColorCountInRegion(x1, y1, x2, y2, colorStr, sim, 0)
 	}, true)
-	engine.RegisterMethod("images.detectsMultiColors", "检测多点颜色", func(colors string, sim float32, displayId int) bool {
-		return images.DetectsMultiColors(colors, sim, displayId)
+	engine.RegisterMethod("images.detectsMultiColors", "检测多点颜色", func(colors string, sim float32) bool {
+		return images.DetectsMultiColors(colors, sim, 0)
 	}, true)
-	engine.RegisterMethod("images.findMultiColors", "查找多点颜色", func(x1, y1, x2, y2 int, colors string, sim float32, dir, displayId int) (int, int) {
-		return images.FindMultiColors(x1, y1, x2, y2, colors, sim, dir, displayId)
+	engine.RegisterMethod("images.findMultiColors", "查找多点颜色", func(x1, y1, x2, y2 int, colors string, sim float32, dir int) (int, int) {
+		return images.FindMultiColors(x1, y1, x2, y2, colors, sim, dir, 0)
 	}, true)
 	engine.RegisterMethod("images.readFromPath", "从路径读取图片", func(path string) *image.NRGBA { return images.ReadFromPath(path) }, true)
 	engine.RegisterMethod("images.readFromUrl", "从URL读取图片", func(url string) *image.NRGBA { return images.ReadFromUrl(url) }, true)

@@ -2,43 +2,14 @@ package lua_engine
 
 import (
 	"image"
-	"sync"
 
 	"github.com/Dasongzi1366/AutoGo/ppocr"
 	lua "github.com/yuin/gopher-lua"
 )
 
-var (
-	ppocrInstance *ppocr.Ppocr
-	ppocrOnce     sync.Once
-	ppocrInitErr  error
-)
-
-func getPpocrInstance() (*ppocr.Ppocr, error) {
-	ppocrOnce.Do(func() {
-		ppocrInstance = ppocr.New("v5")
-	})
-	return ppocrInstance, nil
-}
-
 func injectPpocrMethods(engine *LuaEngine) {
 
-	engine.RegisterMethod("ppocr.ocr", "识别屏幕文字", func(x1, y1, x2, y2 int, colorStr string, displayId int) []ppocr.Result {
-		instance, _ := getPpocrInstance()
-		return instance.Ocr(x1, y1, x2, y2, colorStr, displayId)
-	}, true)
-	engine.RegisterMethod("ppocr.ocrFromImage", "识别图片文字", func(img *image.NRGBA, colorStr string) []ppocr.Result {
-		instance, _ := getPpocrInstance()
-		return instance.OcrFromImage(img, colorStr)
-	}, true)
-	engine.RegisterMethod("ppocr.ocrFromBase64", "识别Base64图片文字", func(b64, colorStr string) []ppocr.Result {
-		instance, _ := getPpocrInstance()
-		return instance.OcrFromBase64(b64, colorStr)
-	}, true)
-	engine.RegisterMethod("ppocr.ocrFromPath", "识别文件图片文字", func(path, colorStr string) []ppocr.Result {
-		instance, _ := getPpocrInstance()
-		return instance.OcrFromPath(path, colorStr)
-	}, true)
+	engine.RegisterMethod("ppocr.new", "创建一个新的PPOCR实例", ppocr.New, true)
 
 	registerPpocrLuaFunctions(engine)
 }
@@ -46,52 +17,72 @@ func injectPpocrMethods(engine *LuaEngine) {
 func registerPpocrLuaFunctions(engine *LuaEngine) {
 	state := engine.GetState()
 
+	state.Register("ppocr_new", func(L *lua.LState) int {
+		version := L.CheckString(1)
+		p := ppocr.New(version)
+		ud := L.NewUserData()
+		ud.Value = p
+		L.Push(ud)
+		return 1
+	})
+
 	state.Register("ppocr_ocr", func(L *lua.LState) int {
-		instance, _ := getPpocrInstance()
-		x1 := L.CheckInt(1)
-		y1 := L.CheckInt(2)
-		x2 := L.CheckInt(3)
-		y2 := L.CheckInt(4)
-		colorStr := L.CheckString(5)
+		ud := L.CheckUserData(1)
+		p := ud.Value.(*ppocr.Ppocr)
+		x1 := L.CheckInt(2)
+		y1 := L.CheckInt(3)
+		x2 := L.CheckInt(4)
+		y2 := L.CheckInt(5)
+		colorStr := L.CheckString(6)
 		displayId := 0
-		if L.GetTop() >= 6 {
-			displayId = L.CheckInt(6)
+		if L.GetTop() >= 7 {
+			displayId = L.CheckInt(7)
 		}
-		results := instance.Ocr(x1, y1, x2, y2, colorStr, displayId)
+		results := p.Ocr(x1, y1, x2, y2, colorStr, displayId)
 		pushResultsToLua(L, results)
 		return 1
 	})
 
 	state.Register("ppocr_ocrFromImage", func(L *lua.LState) int {
-		instance, _ := getPpocrInstance()
 		ud := L.CheckUserData(1)
-		img, ok := ud.Value.(*image.NRGBA)
+		p := ud.Value.(*ppocr.Ppocr)
+		imgUd := L.CheckUserData(2)
+		img, ok := imgUd.Value.(*image.NRGBA)
 		if !ok {
 			L.Push(lua.LNil)
 			return 1
 		}
-		colorStr := L.CheckString(2)
-		results := instance.OcrFromImage(img, colorStr)
+		colorStr := L.CheckString(3)
+		results := p.OcrFromImage(img, colorStr)
 		pushResultsToLua(L, results)
 		return 1
 	})
 
 	state.Register("ppocr_ocrFromBase64", func(L *lua.LState) int {
-		instance, _ := getPpocrInstance()
-		b64 := L.CheckString(1)
-		colorStr := L.CheckString(2)
-		results := instance.OcrFromBase64(b64, colorStr)
+		ud := L.CheckUserData(1)
+		p := ud.Value.(*ppocr.Ppocr)
+		b64 := L.CheckString(2)
+		colorStr := L.CheckString(3)
+		results := p.OcrFromBase64(b64, colorStr)
 		pushResultsToLua(L, results)
 		return 1
 	})
 
 	state.Register("ppocr_ocrFromPath", func(L *lua.LState) int {
-		instance, _ := getPpocrInstance()
-		path := L.CheckString(1)
-		colorStr := L.CheckString(2)
-		results := instance.OcrFromPath(path, colorStr)
+		ud := L.CheckUserData(1)
+		p := ud.Value.(*ppocr.Ppocr)
+		path := L.CheckString(2)
+		colorStr := L.CheckString(3)
+		results := p.OcrFromPath(path, colorStr)
 		pushResultsToLua(L, results)
 		return 1
+	})
+
+	state.Register("ppocr_close", func(L *lua.LState) int {
+		ud := L.CheckUserData(1)
+		p := ud.Value.(*ppocr.Ppocr)
+		p.Close()
+		return 0
 	})
 }
 

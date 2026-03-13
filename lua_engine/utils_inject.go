@@ -10,8 +10,6 @@ func injectUtilsMethods(engine *LuaEngine) {
 	engine.RegisterMethod("utils.logI", "记录一条INFO级别的日志", utils.LogI, true)
 	engine.RegisterMethod("utils.logE", "记录一条ERROR级别的日志", utils.LogE, true)
 	engine.RegisterMethod("utils.shell", "执行shell命令并返回输出", utils.Shell, true)
-	engine.RegisterMethod("utils.toast", "显示Toast提示信息", utils.Toast, true)
-	engine.RegisterMethod("utils.alert", "显示带标题、内容和按钮的弹窗", utils.Alert, true)
 	engine.RegisterMethod("utils.random", "返回指定范围内的随机整数", utils.Random, true)
 	engine.RegisterMethod("utils.sleep", "暂停当前线程指定的毫秒数", utils.Sleep, true)
 	engine.RegisterMethod("utils.i2s", "将整数转换为字符串", utils.I2s, true)
@@ -30,22 +28,22 @@ func registerUtilsLuaFunctions(engine *LuaEngine) {
 	state.Register("utils_logI", func(L *lua.LState) int {
 		label := L.CheckString(1)
 		n := L.GetTop()
-		var messages []any
+		message := ""
 		for i := 2; i <= n; i++ {
-			messages = append(messages, L.Get(i).String())
+			message += L.Get(i).String() + " "
 		}
-		utils.LogI(label, messages...)
+		utils.LogI(label, message)
 		return 0
 	})
 
 	state.Register("utils_logE", func(L *lua.LState) int {
 		label := L.CheckString(1)
 		n := L.GetTop()
-		var messages []any
+		message := ""
 		for i := 2; i <= n; i++ {
-			messages = append(messages, L.Get(i).String())
+			message += L.Get(i).String() + " "
 		}
-		utils.LogE(label, messages...)
+		utils.LogE(label, message)
 		return 0
 	})
 
@@ -53,22 +51,6 @@ func registerUtilsLuaFunctions(engine *LuaEngine) {
 		cmd := L.CheckString(1)
 		result := utils.Shell(cmd)
 		L.Push(lua.LString(result))
-		return 1
-	})
-
-	state.Register("utils_toast", func(L *lua.LState) int {
-		message := L.CheckString(1)
-		utils.Toast(message)
-		return 0
-	})
-
-	state.Register("utils_alert", func(L *lua.LState) int {
-		title := L.CheckString(1)
-		content := L.CheckString(2)
-		btn1Text := L.CheckString(3)
-		btn2Text := L.CheckString(4)
-		result := utils.Alert(title, content, btn1Text, btn2Text)
-		L.Push(lua.LNumber(result))
 		return 1
 	})
 

@@ -41,7 +41,10 @@ func registerImeLuaFunctions(engine *LuaEngine) {
 
 	state.Register("ime_inputText", func(L *lua.LState) int {
 		text := L.CheckString(1)
-		displayId := L.CheckInt(2)
+		displayId := 0
+		if L.GetTop() > 1 {
+			displayId = L.CheckInt(2)
+		}
 		ime.InputText(text, displayId)
 		return 0
 	})

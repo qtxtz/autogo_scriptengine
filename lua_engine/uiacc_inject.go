@@ -7,7 +7,7 @@ import (
 
 func injectUiaccMethods(engine *LuaEngine) {
 
-	engine.RegisterMethod("uiacc.new", "创建一个新的Accessibility对象", uiacc.New, true)
+	engine.RegisterMethod("uiacc.new", "创建一个新的Accessibility对象", func(displayId int) *uiacc.Uiacc { return uiacc.New(displayId) }, true)
 	engine.RegisterMethod("uiacc.text", "设置选择器的text属性", (*uiacc.Uiacc).Text, true)
 	engine.RegisterMethod("uiacc.textContains", "设置选择器的textContains属性", (*uiacc.Uiacc).TextContains, true)
 	engine.RegisterMethod("uiacc.id", "设置选择器的id属性", (*uiacc.Uiacc).Id, true)
@@ -17,7 +17,6 @@ func injectUiaccMethods(engine *LuaEngine) {
 	engine.RegisterMethod("uiacc.waitFor", "等待控件出现并返回UiObject对象", (*uiacc.Uiacc).WaitFor, true)
 	engine.RegisterMethod("uiacc.findOnce", "查找单个控件并返回UiObject对象", (*uiacc.Uiacc).FindOnce, true)
 	engine.RegisterMethod("uiacc.find", "查找所有符合条件的控件并返回UiObject对象数组", (*uiacc.Uiacc).Find, true)
-	engine.RegisterMethod("uiacc.release", "释放无障碍对象", (*uiacc.Uiacc).Release, true)
 	engine.RegisterMethod("uiacc.objClick", "点击该控件", (*uiacc.UiObject).Click, true)
 	engine.RegisterMethod("uiacc.clickCenter", "使用坐标点击该控件的中点", (*uiacc.UiObject).ClickCenter, true)
 	engine.RegisterMethod("uiacc.setText", "设置输入框控件的文本内容", (*uiacc.UiObject).SetText, true)
@@ -32,7 +31,10 @@ func registerUiaccLuaFunctions(engine *LuaEngine) {
 	state := engine.GetState()
 
 	state.Register("uiacc_new", func(L *lua.LState) int {
-		displayId := L.CheckInt(1)
+		displayId := 0
+		if L.GetTop() >= 1 {
+			displayId = L.CheckInt(1)
+		}
 		u := uiacc.New(displayId)
 		ud := L.NewUserData()
 		ud.Value = u
@@ -141,13 +143,6 @@ func registerUiaccLuaFunctions(engine *LuaEngine) {
 		}
 		L.Push(tbl)
 		return 1
-	})
-
-	state.Register("uiacc_release", func(L *lua.LState) int {
-		ud := L.CheckUserData(1)
-		u := ud.Value.(*uiacc.Uiacc)
-		u.Release()
-		return 0
 	})
 
 	// UiObject methods

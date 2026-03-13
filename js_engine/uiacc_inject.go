@@ -13,7 +13,10 @@ func injectUiaccMethods(engine *JSEngine) {
 
 	// 创建新的 Uiacc 对象
 	uiaccObj.Set("new", func(call goja.FunctionCall) goja.Value {
-		displayId := int(call.Argument(0).ToInteger())
+		displayId := 0
+		if len(call.Arguments) >= 1 {
+			displayId = int(call.Argument(0).ToInteger())
+		}
 		u := uiacc.New(displayId)
 		return vm.ToValue(u)
 	})
@@ -329,20 +332,6 @@ func injectUiaccMethods(engine *JSEngine) {
 		return vm.ToValue(result)
 	})
 
-	uiaccObj.Set("visible", func(call goja.FunctionCall) goja.Value {
-		u := call.Argument(0).Export().(*uiacc.Uiacc)
-		value := call.Argument(1).ToBoolean()
-		result := u.Visible(value)
-		return vm.ToValue(result)
-	})
-
-	uiaccObj.Set("password", func(call goja.FunctionCall) goja.Value {
-		u := call.Argument(0).Export().(*uiacc.Uiacc)
-		value := call.Argument(1).ToBoolean()
-		result := u.Password(value)
-		return vm.ToValue(result)
-	})
-
 	uiaccObj.Set("click", func(call goja.FunctionCall) goja.Value {
 		u := call.Argument(0).Export().(*uiacc.Uiacc)
 		text := call.Argument(1).String()
@@ -367,12 +356,6 @@ func injectUiaccMethods(engine *JSEngine) {
 		u := call.Argument(0).Export().(*uiacc.Uiacc)
 		result := u.Find()
 		return vm.ToValue(result)
-	})
-
-	uiaccObj.Set("release", func(call goja.FunctionCall) goja.Value {
-		u := call.Argument(0).Export().(*uiacc.Uiacc)
-		u.Release()
-		return goja.Undefined()
 	})
 
 	// UiObject 方法
@@ -554,18 +537,6 @@ func injectUiaccMethods(engine *JSEngine) {
 		return vm.ToValue(result)
 	})
 
-	uiaccObj.Set("getVisible", func(call goja.FunctionCall) goja.Value {
-		obj := call.Argument(0).Export().(*uiacc.UiObject)
-		result := obj.GetVisible()
-		return vm.ToValue(result)
-	})
-
-	uiaccObj.Set("getPassword", func(call goja.FunctionCall) goja.Value {
-		obj := call.Argument(0).Export().(*uiacc.UiObject)
-		result := obj.GetPassword()
-		return vm.ToValue(result)
-	})
-
 	uiaccObj.Set("getAccessibilityFocused", func(call goja.FunctionCall) goja.Value {
 		obj := call.Argument(0).Export().(*uiacc.UiObject)
 		result := obj.GetAccessibilityFocused()
@@ -651,14 +622,8 @@ func injectUiaccMethods(engine *JSEngine) {
 		return vm.ToValue(result)
 	})
 
-	uiaccObj.Set("toString", func(call goja.FunctionCall) goja.Value {
-		obj := call.Argument(0).Export().(*uiacc.UiObject)
-		result := obj.ToString()
-		return vm.ToValue(result)
-	})
-
 	// 注册方法到文档
-	engine.RegisterMethod("uiacc.new", "创建一个新的Accessibility对象", uiacc.New, true)
+	engine.RegisterMethod("uiacc.new", "创建一个新的Accessibility对象", func(displayId int) *uiacc.Uiacc { return uiacc.New(displayId) }, true)
 	engine.RegisterMethod("uiacc.text", "设置选择器的text属性", (*uiacc.Uiacc).Text, true)
 	engine.RegisterMethod("uiacc.textContains", "设置选择器的textContains属性", (*uiacc.Uiacc).TextContains, true)
 	engine.RegisterMethod("uiacc.textStartsWith", "设置选择器的textStartsWith属性", (*uiacc.Uiacc).TextStartsWith, true)
@@ -702,13 +667,10 @@ func injectUiaccMethods(engine *JSEngine) {
 	engine.RegisterMethod("uiacc.focused", "设置选择器的focused属性", (*uiacc.Uiacc).Focused, true)
 	engine.RegisterMethod("uiacc.contextClickable", "设置选择器的contextClickable属性", (*uiacc.Uiacc).ContextClickable, true)
 	engine.RegisterMethod("uiacc.index", "设置选择器的index属性", (*uiacc.Uiacc).Index, true)
-	engine.RegisterMethod("uiacc.visible", "设置选择器的visible属性", (*uiacc.Uiacc).Visible, true)
-	engine.RegisterMethod("uiacc.password", "设置选择器的password属性", (*uiacc.Uiacc).Password, true)
 	engine.RegisterMethod("uiacc.click", "点击屏幕上的文本", (*uiacc.Uiacc).Click, true)
 	engine.RegisterMethod("uiacc.waitFor", "等待控件出现并返回UiObject对象", (*uiacc.Uiacc).WaitFor, true)
 	engine.RegisterMethod("uiacc.findOnce", "查找单个控件并返回UiObject对象", (*uiacc.Uiacc).FindOnce, true)
 	engine.RegisterMethod("uiacc.find", "查找所有符合条件的控件并返回UiObject对象数组", (*uiacc.Uiacc).Find, true)
-	engine.RegisterMethod("uiacc.release", "释放无障碍对象", (*uiacc.Uiacc).Release, true)
 
 	// UiObject 方法注册
 	engine.RegisterMethod("uiacc.objClick", "点击该控件", (*uiacc.UiObject).Click, true)
@@ -740,8 +702,6 @@ func injectUiaccMethods(engine *JSEngine) {
 	engine.RegisterMethod("uiacc.getFocusable", "获取控件的focusable属性", (*uiacc.UiObject).GetFocusable, true)
 	engine.RegisterMethod("uiacc.getDismissable", "获取控件的dismissable属性", (*uiacc.UiObject).GetDismissable, true)
 	engine.RegisterMethod("uiacc.getContextClickable", "获取控件的contextClickable属性", (*uiacc.UiObject).GetContextClickable, true)
-	engine.RegisterMethod("uiacc.getVisible", "获取控件的visible属性", (*uiacc.UiObject).GetVisible, true)
-	engine.RegisterMethod("uiacc.getPassword", "获取控件的password属性", (*uiacc.UiObject).GetPassword, true)
 	engine.RegisterMethod("uiacc.getAccessibilityFocused", "获取控件的AccessibilityFocused属性", (*uiacc.UiObject).GetAccessibilityFocused, true)
 	engine.RegisterMethod("uiacc.getChildCount", "获取控件的子控件数目", (*uiacc.UiObject).GetChildCount, true)
 	engine.RegisterMethod("uiacc.getDrawingOrder", "获取控件在父控件中的绘制次序", (*uiacc.UiObject).GetDrawingOrder, true)
@@ -756,5 +716,4 @@ func injectUiaccMethods(engine *JSEngine) {
 	engine.RegisterMethod("uiacc.getParent", "获取控件的父控件", (*uiacc.UiObject).GetParent, true)
 	engine.RegisterMethod("uiacc.getChild", "获取控件的指定索引的子控件", (*uiacc.UiObject).GetChild, true)
 	engine.RegisterMethod("uiacc.getChildren", "获取控件的所有子控件", (*uiacc.UiObject).GetChildren, true)
-	engine.RegisterMethod("uiacc.toString", "节点对象转文本", (*uiacc.UiObject).ToString, true)
 }

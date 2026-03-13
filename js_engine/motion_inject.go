@@ -12,15 +12,13 @@ func injectMotionMethods(engine *JSEngine) {
 		x := int(call.Argument(0).ToInteger())
 		y := int(call.Argument(1).ToInteger())
 		fingerID := 0
-		displayId := 0
-
 		if len(call.Arguments) > 2 {
 			fingerID = int(call.Argument(2).ToInteger())
 		}
+		displayId := 0
 		if len(call.Arguments) > 3 {
 			displayId = int(call.Argument(3).ToInteger())
 		}
-
 		motion.TouchDown(x, y, fingerID, displayId)
 		return goja.Undefined()
 	})
@@ -29,15 +27,13 @@ func injectMotionMethods(engine *JSEngine) {
 		x := int(call.Argument(0).ToInteger())
 		y := int(call.Argument(1).ToInteger())
 		fingerID := 0
-		displayId := 0
-
 		if len(call.Arguments) > 2 {
 			fingerID = int(call.Argument(2).ToInteger())
 		}
+		displayId := 0
 		if len(call.Arguments) > 3 {
 			displayId = int(call.Argument(3).ToInteger())
 		}
-
 		motion.TouchMove(x, y, fingerID, displayId)
 		return goja.Undefined()
 	})
@@ -46,15 +42,13 @@ func injectMotionMethods(engine *JSEngine) {
 		x := int(call.Argument(0).ToInteger())
 		y := int(call.Argument(1).ToInteger())
 		fingerID := 0
-		displayId := 0
-
 		if len(call.Arguments) > 2 {
 			fingerID = int(call.Argument(2).ToInteger())
 		}
+		displayId := 0
 		if len(call.Arguments) > 3 {
 			displayId = int(call.Argument(3).ToInteger())
 		}
-
 		motion.TouchUp(x, y, fingerID, displayId)
 		return goja.Undefined()
 	})
@@ -63,15 +57,13 @@ func injectMotionMethods(engine *JSEngine) {
 		x := int(call.Argument(0).ToInteger())
 		y := int(call.Argument(1).ToInteger())
 		fingerID := 0
-		displayId := 0
-
 		if len(call.Arguments) > 2 {
 			fingerID = int(call.Argument(2).ToInteger())
 		}
+		displayId := 0
 		if len(call.Arguments) > 3 {
 			displayId = int(call.Argument(3).ToInteger())
 		}
-
 		motion.Click(x, y, fingerID, displayId)
 		return goja.Undefined()
 	})
@@ -80,19 +72,17 @@ func injectMotionMethods(engine *JSEngine) {
 		x := int(call.Argument(0).ToInteger())
 		y := int(call.Argument(1).ToInteger())
 		duration := 500
-		fingerID := 0
-		displayId := 0
-
 		if len(call.Arguments) > 2 {
 			duration = int(call.Argument(2).ToInteger())
 		}
+		fingerID := 0
 		if len(call.Arguments) > 3 {
 			fingerID = int(call.Argument(3).ToInteger())
 		}
+		displayId := 0
 		if len(call.Arguments) > 4 {
 			displayId = int(call.Argument(4).ToInteger())
 		}
-
 		motion.LongClick(x, y, duration, fingerID, displayId)
 		return goja.Undefined()
 	})
@@ -103,9 +93,14 @@ func injectMotionMethods(engine *JSEngine) {
 		x2 := int(call.Argument(2).ToInteger())
 		y2 := int(call.Argument(3).ToInteger())
 		duration := int(call.Argument(4).ToInteger())
-		fingerID := int(call.Argument(5).ToInteger())
-		displayId := int(call.Argument(6).ToInteger())
-
+		fingerID := 0
+		if len(call.Arguments) > 5 {
+			fingerID = int(call.Argument(5).ToInteger())
+		}
+		displayId := 0
+		if len(call.Arguments) > 6 {
+			displayId = int(call.Argument(6).ToInteger())
+		}
 		motion.Swipe(x1, y1, x2, y2, duration, fingerID, displayId)
 		return goja.Undefined()
 	})
@@ -116,9 +111,14 @@ func injectMotionMethods(engine *JSEngine) {
 		x2 := int(call.Argument(2).ToInteger())
 		y2 := int(call.Argument(3).ToInteger())
 		duration := int(call.Argument(4).ToInteger())
-		fingerID := int(call.Argument(5).ToInteger())
-		displayId := int(call.Argument(6).ToInteger())
-
+		fingerID := 0
+		if len(call.Arguments) > 5 {
+			fingerID = int(call.Argument(5).ToInteger())
+		}
+		displayId := 0
+		if len(call.Arguments) > 6 {
+			displayId = int(call.Argument(6).ToInteger())
+		}
 		motion.Swipe2(x1, y1, x2, y2, duration, fingerID, displayId)
 		return goja.Undefined()
 	})
@@ -190,11 +190,7 @@ func injectMotionMethods(engine *JSEngine) {
 
 	vm.Set("keyAction", func(call goja.FunctionCall) goja.Value {
 		code := int(call.Argument(0).ToInteger())
-		displayId := 0
-		if len(call.Arguments) > 1 {
-			displayId = int(call.Argument(1).ToInteger())
-		}
-		motion.KeyAction(code, displayId)
+		motion.KeyAction(code)
 		return goja.Undefined()
 	})
 

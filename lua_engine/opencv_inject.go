@@ -7,7 +7,8 @@ import (
 
 func injectOpenCVMethods(engine *LuaEngine) {
 
-	engine.RegisterMethod("opencv.findImage", "在指定区域内查找匹配的图片模板", func(x1, y1, x2, y2 int, template *[]byte, isGray bool, scalingFactor, sim float32, displayId int) (int, int) {
+	engine.RegisterMethod("opencv.findImage", "在指定区域内查找匹配的图片模板", func(x1, y1, x2, y2 int, template *[]byte, isGray bool, scalingFactor, sim float32) (int, int) {
+		displayId := 0
 		return opencv.FindImage(x1, y1, x2, y2, template, isGray, scalingFactor, sim, displayId)
 	}, true)
 

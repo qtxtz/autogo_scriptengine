@@ -30,7 +30,10 @@ func injectImeMethods(engine *JSEngine) {
 
 	imeObj.Set("inputText", func(call goja.FunctionCall) goja.Value {
 		text := call.Argument(0).String()
-		displayId := int(call.Argument(1).ToInteger())
+		displayId := 0
+		if len(call.Arguments) >= 2 {
+			displayId = int(call.Argument(1).ToInteger())
+		}
 		ime.InputText(text, displayId)
 		return goja.Undefined()
 	})

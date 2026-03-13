@@ -7,12 +7,12 @@ import (
 
 func injectDeviceMethods(engine *LuaEngine) {
 
-	engine.RegisterMethod("device.width", "设备分辨率宽度", func(displayId int) int {
-		width, _, _, _ := device.GetDisplayInfo(displayId)
+	engine.RegisterMethod("device.width", "设备分辨率宽度", func() int { 
+		width, _, _, _ := device.GetDisplayInfo(0)
 		return width
 	}, true)
-	engine.RegisterMethod("device.height", "设备分辨率高度", func(displayId int) int {
-		_, height, _, _ := device.GetDisplayInfo(displayId)
+	engine.RegisterMethod("device.height", "设备分辨率高度", func() int { 
+		_, height, _, _ := device.GetDisplayInfo(0)
 		return height
 	}, true)
 	engine.RegisterMethod("device.sdkInt", "安卓系统API版本", func() int { return device.SdkInt }, true)
@@ -73,21 +73,13 @@ func registerDeviceLuaFunctions(engine *LuaEngine) {
 
 	// 设备属性 - 函数形式
 	state.SetField(deviceTable, "width", state.NewFunction(func(L *lua.LState) int {
-		displayId := 0
-		if L.GetTop() >= 1 {
-			displayId = L.CheckInt(1)
-		}
-		width, _, _, _ := device.GetDisplayInfo(displayId)
+		width, _, _, _ := device.GetDisplayInfo(0)
 		L.Push(lua.LNumber(width))
 		return 1
 	}))
 
 	state.SetField(deviceTable, "height", state.NewFunction(func(L *lua.LState) int {
-		displayId := 0
-		if L.GetTop() >= 1 {
-			displayId = L.CheckInt(1)
-		}
-		_, height, _, _ := device.GetDisplayInfo(displayId)
+		_, height, _, _ := device.GetDisplayInfo(0)
 		L.Push(lua.LNumber(height))
 		return 1
 	}))

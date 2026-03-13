@@ -13,42 +13,27 @@ func injectUtilsMethods(engine *JSEngine) {
 
 	utilsObj.Set("logI", func(call goja.FunctionCall) goja.Value {
 		label := call.Argument(0).String()
-		var messages []any
+		message := ""
 		for i := 1; i < len(call.Arguments); i++ {
-			messages = append(messages, call.Argument(i).Export())
+			message += call.Argument(i).String() + " "
 		}
-		utils.LogI(label, messages...)
+		utils.LogI(label, message)
 		return goja.Undefined()
 	})
 
 	utilsObj.Set("logE", func(call goja.FunctionCall) goja.Value {
 		label := call.Argument(0).String()
-		var messages []any
+		message := ""
 		for i := 1; i < len(call.Arguments); i++ {
-			messages = append(messages, call.Argument(i).Export())
+			message += call.Argument(i).String() + " "
 		}
-		utils.LogE(label, messages...)
+		utils.LogE(label, message)
 		return goja.Undefined()
 	})
 
 	utilsObj.Set("shell", func(call goja.FunctionCall) goja.Value {
 		cmd := call.Argument(0).String()
 		result := utils.Shell(cmd)
-		return vm.ToValue(result)
-	})
-
-	utilsObj.Set("toast", func(call goja.FunctionCall) goja.Value {
-		message := call.Argument(0).String()
-		utils.Toast(message)
-		return goja.Undefined()
-	})
-
-	utilsObj.Set("alert", func(call goja.FunctionCall) goja.Value {
-		title := call.Argument(0).String()
-		content := call.Argument(1).String()
-		btn1Text := call.Argument(2).String()
-		btn2Text := call.Argument(3).String()
-		result := utils.Alert(title, content, btn1Text, btn2Text)
 		return vm.ToValue(result)
 	})
 
@@ -105,8 +90,6 @@ func injectUtilsMethods(engine *JSEngine) {
 	engine.RegisterMethod("utils.logI", "记录一条INFO级别的日志", utils.LogI, true)
 	engine.RegisterMethod("utils.logE", "记录一条ERROR级别的日志", utils.LogE, true)
 	engine.RegisterMethod("utils.shell", "执行shell命令并返回输出", utils.Shell, true)
-	engine.RegisterMethod("utils.toast", "显示Toast提示信息", utils.Toast, true)
-	engine.RegisterMethod("utils.alert", "显示带标题、内容和按钮的弹窗", utils.Alert, true)
 	engine.RegisterMethod("utils.random", "返回指定范围内的随机整数", utils.Random, true)
 	engine.RegisterMethod("utils.sleep", "暂停当前线程指定的毫秒数", utils.Sleep, true)
 	engine.RegisterMethod("utils.i2s", "将整数转换为字符串", utils.I2s, true)

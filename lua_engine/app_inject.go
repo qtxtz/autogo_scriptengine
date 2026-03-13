@@ -9,12 +9,11 @@ func injectAppMethods(engine *LuaEngine) {
 
 	engine.RegisterMethod("app.currentPackage", "获取当前页面应用包名", app.CurrentPackage, true)
 	engine.RegisterMethod("app.currentActivity", "获取当前页面应用类名", app.CurrentActivity, true)
-	engine.RegisterMethod("app.launch", "通过应用包名启动应用", func(packageName string, displayId int) bool {
+	engine.RegisterMethod("app.launch", "通过应用包名启动应用", func(packageName string) bool {
+		displayId := 0
 		return app.Launch(packageName, displayId)
 	}, true)
-	engine.RegisterMethod("app.openAppSetting", "打开应用的详情页(设置页)", func(packageName string) bool {
-		return app.OpenSetting(packageName)
-	}, true)
+
 	engine.RegisterMethod("app.viewFile", "用其他应用查看文件", func(path string) {
 		app.ViewFile(path)
 	}, true)
@@ -79,18 +78,16 @@ func registerAppLuaFunctions(engine *LuaEngine) {
 
 	state.Register("app_launch", func(L *lua.LState) int {
 		packageName := L.CheckString(1)
-		displayId := L.CheckInt(2)
+		displayId := 0
+		if L.GetTop() >= 2 {
+			displayId = L.CheckInt(2)
+		}
 		result := app.Launch(packageName, displayId)
 		L.Push(lua.LBool(result))
 		return 1
 	})
 
-	state.Register("app_openAppSetting", func(L *lua.LState) int {
-		packageName := L.CheckString(1)
-		result := app.OpenSetting(packageName)
-		L.Push(lua.LBool(result))
-		return 1
-	})
+
 
 	state.Register("app_viewFile", func(L *lua.LState) int {
 		path := L.CheckString(1)

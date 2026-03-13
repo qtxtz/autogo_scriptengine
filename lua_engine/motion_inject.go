@@ -39,15 +39,13 @@ func registerMotionLuaFunctions(engine *LuaEngine) {
 		x := L.CheckInt(1)
 		y := L.CheckInt(2)
 		fingerID := 0
-		displayId := 0
-
 		if L.GetTop() >= 3 {
 			fingerID = L.CheckInt(3)
 		}
+		displayId := 0
 		if L.GetTop() >= 4 {
 			displayId = L.CheckInt(4)
 		}
-
 		motion.TouchDown(x, y, fingerID, displayId)
 		return 0
 	})
@@ -56,15 +54,13 @@ func registerMotionLuaFunctions(engine *LuaEngine) {
 		x := L.CheckInt(1)
 		y := L.CheckInt(2)
 		fingerID := 0
-		displayId := 0
-
 		if L.GetTop() >= 3 {
 			fingerID = L.CheckInt(3)
 		}
+		displayId := 0
 		if L.GetTop() >= 4 {
 			displayId = L.CheckInt(4)
 		}
-
 		motion.TouchMove(x, y, fingerID, displayId)
 		return 0
 	})
@@ -73,15 +69,13 @@ func registerMotionLuaFunctions(engine *LuaEngine) {
 		x := L.CheckInt(1)
 		y := L.CheckInt(2)
 		fingerID := 0
-		displayId := 0
-
 		if L.GetTop() >= 3 {
 			fingerID = L.CheckInt(3)
 		}
+		displayId := 0
 		if L.GetTop() >= 4 {
 			displayId = L.CheckInt(4)
 		}
-
 		motion.TouchUp(x, y, fingerID, displayId)
 		return 0
 	})
@@ -90,15 +84,13 @@ func registerMotionLuaFunctions(engine *LuaEngine) {
 		x := L.CheckInt(1)
 		y := L.CheckInt(2)
 		fingerID := 0
-		displayId := 0
-
 		if L.GetTop() >= 3 {
 			fingerID = L.CheckInt(3)
 		}
+		displayId := 0
 		if L.GetTop() >= 4 {
 			displayId = L.CheckInt(4)
 		}
-
 		motion.Click(x, y, fingerID, displayId)
 		return 0
 	})
@@ -107,19 +99,17 @@ func registerMotionLuaFunctions(engine *LuaEngine) {
 		x := L.CheckInt(1)
 		y := L.CheckInt(2)
 		duration := 500
-		fingerID := 0
-		displayId := 0
-
 		if L.GetTop() >= 3 {
 			duration = L.CheckInt(3)
 		}
+		fingerID := 0
 		if L.GetTop() >= 4 {
 			fingerID = L.CheckInt(4)
 		}
+		displayId := 0
 		if L.GetTop() >= 5 {
 			displayId = L.CheckInt(5)
 		}
-
 		motion.LongClick(x, y, duration, fingerID, displayId)
 		return 0
 	})
@@ -130,8 +120,14 @@ func registerMotionLuaFunctions(engine *LuaEngine) {
 		x2 := L.CheckInt(3)
 		y2 := L.CheckInt(4)
 		duration := L.CheckInt(5)
-		fingerID := L.CheckInt(6)
-		displayId := L.CheckInt(7)
+		fingerID := 0
+		if L.GetTop() >= 6 {
+			fingerID = L.CheckInt(6)
+		}
+		displayId := 0
+		if L.GetTop() >= 7 {
+			displayId = L.CheckInt(7)
+		}
 		motion.Swipe(x1, y1, x2, y2, duration, fingerID, displayId)
 		return 0
 	})
@@ -142,8 +138,14 @@ func registerMotionLuaFunctions(engine *LuaEngine) {
 		x2 := L.CheckInt(3)
 		y2 := L.CheckInt(4)
 		duration := L.CheckInt(5)
-		fingerID := L.CheckInt(6)
-		displayId := L.CheckInt(7)
+		fingerID := 0
+		if L.GetTop() >= 6 {
+			fingerID = L.CheckInt(6)
+		}
+		displayId := 0
+		if L.GetTop() >= 7 {
+			displayId = L.CheckInt(7)
+		}
 		motion.Swipe2(x1, y1, x2, y2, duration, fingerID, displayId)
 		return 0
 	})

@@ -11,10 +11,14 @@ func injectDeviceMethods(engine *JSEngine) {
 	deviceObj := vm.NewObject()
 	vm.Set("device", deviceObj)
 
-	// 设备分辨率 - 计算默认 displayId (0) 的值
-	width, height, _, _ := device.GetDisplayInfo(0)
-	deviceObj.Set("width", width)
-	deviceObj.Set("height", height)
+	deviceObj.Set("width", func() int {
+		width, _, _, _ := device.GetDisplayInfo(0)
+		return width
+	})
+	deviceObj.Set("height", func() int {
+		_, height, _, _ := device.GetDisplayInfo(0)
+		return height
+	})
 
 	// 设备静态属性
 	deviceObj.Set("sdkInt", device.SdkInt)
@@ -181,12 +185,12 @@ func injectDeviceMethods(engine *JSEngine) {
 		return goja.Undefined()
 	})
 
-	engine.RegisterMethod("device.width", "设备分辨率宽度", func(displayId int) int {
-		width, _, _, _ := device.GetDisplayInfo(displayId)
+	engine.RegisterMethod("device.width", "设备分辨率宽度", func() int {
+		width, _, _, _ := device.GetDisplayInfo(0)
 		return width
 	}, true)
-	engine.RegisterMethod("device.height", "设备分辨率高度", func(displayId int) int {
-		_, height, _, _ := device.GetDisplayInfo(displayId)
+	engine.RegisterMethod("device.height", "设备分辨率高度", func() int {
+		_, height, _, _ := device.GetDisplayInfo(0)
 		return height
 	}, true)
 	engine.RegisterMethod("device.sdkInt", "安卓系统API版本", func() int { return device.SdkInt }, true)

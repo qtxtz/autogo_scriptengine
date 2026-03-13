@@ -7,7 +7,7 @@ import (
 
 func injectConsoleMethods(engine *LuaEngine) {
 
-	engine.RegisterMethod("console.new", "创建一个新的Console对象", console.New, true)
+	engine.RegisterMethod("console.new", "创建控制台对象", console.New, true)
 
 	registerConsoleLuaFunctions(engine)
 }
@@ -23,63 +23,6 @@ func registerConsoleLuaFunctions(engine *LuaEngine) {
 		return 1
 	})
 
-	state.Register("console_setWindowSize", func(L *lua.LState) int {
-		ud := L.CheckUserData(1)
-		c := ud.Value.(*console.Console)
-		width := L.CheckInt(2)
-		height := L.CheckInt(3)
-		c.SetWindowSize(width, height)
-		ud2 := L.NewUserData()
-		ud2.Value = c
-		L.Push(ud2)
-		return 1
-	})
-
-	state.Register("console_setWindowPosition", func(L *lua.LState) int {
-		ud := L.CheckUserData(1)
-		c := ud.Value.(*console.Console)
-		x := L.CheckInt(2)
-		y := L.CheckInt(3)
-		c.SetWindowPosition(x, y)
-		ud2 := L.NewUserData()
-		ud2.Value = c
-		L.Push(ud2)
-		return 1
-	})
-
-	state.Register("console_setWindowColor", func(L *lua.LState) int {
-		ud := L.CheckUserData(1)
-		c := ud.Value.(*console.Console)
-		color := L.CheckString(2)
-		c.SetWindowColor(color)
-		ud2 := L.NewUserData()
-		ud2.Value = c
-		L.Push(ud2)
-		return 1
-	})
-
-	state.Register("console_setTextColor", func(L *lua.LState) int {
-		ud := L.CheckUserData(1)
-		c := ud.Value.(*console.Console)
-		color := L.CheckString(2)
-		c.SetTextColor(color)
-		ud2 := L.NewUserData()
-		ud2.Value = c
-		L.Push(ud2)
-		return 1
-	})
-
-	state.Register("console_setTextSize", func(L *lua.LState) int {
-		ud := L.CheckUserData(1)
-		c := ud.Value.(*console.Console)
-		size := L.CheckInt(2)
-		c.SetTextSize(size)
-		ud2 := L.NewUserData()
-		ud2.Value = c
-		L.Push(ud2)
-		return 1
-	})
-
 	state.Register("console_println", func(L *lua.LState) int {
 		ud := L.CheckUserData(1)
 		c := ud.Value.(*console.Console)
@@ -92,10 +35,45 @@ func registerConsoleLuaFunctions(engine *LuaEngine) {
 		return 0
 	})
 
-	state.Register("console_clear", func(L *lua.LState) int {
+	state.Register("console_setTextSize", func(L *lua.LState) int {
 		ud := L.CheckUserData(1)
 		c := ud.Value.(*console.Console)
-		c.Clear()
+		size := L.CheckInt(2)
+		c.SetTextSize(size)
+		return 0
+	})
+
+	state.Register("console_setTextColor", func(L *lua.LState) int {
+		ud := L.CheckUserData(1)
+		c := ud.Value.(*console.Console)
+		color := L.CheckString(2)
+		c.SetTextColor(color)
+		return 0
+	})
+
+	state.Register("console_setWindowSize", func(L *lua.LState) int {
+		ud := L.CheckUserData(1)
+		c := ud.Value.(*console.Console)
+		width := L.CheckInt(2)
+		height := L.CheckInt(3)
+		c.SetWindowSize(width, height)
+		return 0
+	})
+
+	state.Register("console_setWindowPosition", func(L *lua.LState) int {
+		ud := L.CheckUserData(1)
+		c := ud.Value.(*console.Console)
+		x := L.CheckInt(2)
+		y := L.CheckInt(3)
+		c.SetWindowPosition(x, y)
+		return 0
+	})
+
+	state.Register("console_setWindowColor", func(L *lua.LState) int {
+		ud := L.CheckUserData(1)
+		c := ud.Value.(*console.Console)
+		color := L.CheckString(2)
+		c.SetWindowColor(color)
 		return 0
 	})
 
@@ -113,11 +91,18 @@ func registerConsoleLuaFunctions(engine *LuaEngine) {
 		return 0
 	})
 
+	state.Register("console_clear", func(L *lua.LState) int {
+		ud := L.CheckUserData(1)
+		c := ud.Value.(*console.Console)
+		c.Clear()
+		return 0
+	})
+
 	state.Register("console_isVisible", func(L *lua.LState) int {
 		ud := L.CheckUserData(1)
 		c := ud.Value.(*console.Console)
-		result := c.IsVisible()
-		L.Push(lua.LBool(result))
+		visible := c.IsVisible()
+		L.Push(lua.LBool(visible))
 		return 1
 	})
 
