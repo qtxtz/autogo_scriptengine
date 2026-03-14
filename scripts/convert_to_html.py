@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Markdown 转 HTML 转换脚本
-将项目中的所有 README.md 文件转换为 HTML 文档
+Markdown 转 HTML 转换脚本（带侧边栏版本）
+将项目中的所有 README.md 文件转换为带左侧菜单的 HTML 文档
 """
 
 import os
 import re
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -19,13 +20,13 @@ except ImportError:
     print("请运行: pip install markdown")
     sys.exit(1)
 
-# HTML 模板
+# HTML 模板（带侧边栏）
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title}</title>
+    <title>AutoGo ScriptEngine 文档</title>
     <style>
         * {{
             margin: 0;
@@ -37,39 +38,177 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
             line-height: 1.6;
             color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-        }}
-        
-        .container {{
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            background: #f5f7fa;
+            height: 100vh;
             overflow: hidden;
         }}
         
-        .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px;
-            text-align: center;
+        .app-container {{
+            display: flex;
+            height: 100vh;
         }}
         
-        .header h1 {{
-            font-size: 2.5em;
+        /* 左侧边栏 */
+        .sidebar {{
+            width: 300px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }}
+        
+        .sidebar-header {{
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }}
+        
+        .sidebar-header h1 {{
+            font-size: 1.8em;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }}
         
-        .header .subtitle {{
-            font-size: 1.2em;
+        .sidebar-header .subtitle {{
+            font-size: 0.9em;
             opacity: 0.9;
         }}
         
-        .content {{
+        .search-box {{
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }}
+        
+        .search-box input {{
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 0.9em;
+            outline: none;
+            transition: all 0.3s ease;
+        }}
+        
+        .search-box input::placeholder {{
+            color: rgba(255,255,255,0.6);
+        }}
+        
+        .search-box input:focus {{
+            background: rgba(255,255,255,0.3);
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.2);
+        }}
+        
+        .search-results {{
+            display: none;
+            padding: 10px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }}
+        
+        .search-results.show {{
+            display: block;
+        }}
+        
+        .search-result-item {{
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }}
+        
+        .search-result-item:hover {{
+            background: rgba(255,255,255,0.15);
+        }}
+        
+        .search-result-item .title {{
+            font-size: 0.9em;
+            margin-bottom: 3px;
+        }}
+        
+        .search-result-item .path {{
+            font-size: 0.75em;
+            opacity: 0.7;
+        }}
+        
+        .sidebar-content {{
+            padding: 20px 0;
+        }}
+        
+        .sidebar-section {{
+            margin-bottom: 20px;
+        }}
+        
+        .sidebar-section-title {{
+            padding: 10px 20px;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.7;
+            font-weight: 600;
+        }}
+        
+        .sidebar-menu {{
+            list-style: none;
+        }}
+        
+        .sidebar-menu-item {{
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            font-size: 0.95em;
+        }}
+        
+        .sidebar-menu-item:hover {{
+            background: rgba(255,255,255,0.1);
+            border-left-color: rgba(255,255,255,0.5);
+        }}
+        
+        .sidebar-menu-item.active {{
+            background: rgba(255,255,255,0.2);
+            border-left-color: white;
+            font-weight: 600;
+        }}
+        
+        .sidebar-menu-item .icon {{
+            margin-right: 8px;
+            opacity: 0.7;
+        }}
+        
+        /* 右侧内容区 */
+        .main-content {{
+            flex: 1;
+            overflow-y: auto;
             padding: 40px;
+        }}
+        
+        .content-wrapper {{
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 50px;
+        }}
+        
+        .content-header {{
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+        }}
+        
+        .content-header h1 {{
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }}
+        
+        .content-header .breadcrumb {{
+            color: #999;
+            font-size: 0.9em;
         }}
         
         h1 {{
@@ -203,80 +342,178 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }}
         
-        .toc {{
-            background: #f8f9fa;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
+        /* 滚动条样式 */
+        .sidebar::-webkit-scrollbar,
+        .main-content::-webkit-scrollbar {{
+            width: 8px;
         }}
         
-        .toc h3 {{
-            color: #667eea;
-            margin-top: 0;
-            margin-bottom: 15px;
+        .sidebar::-webkit-scrollbar-track,
+        .main-content::-webkit-scrollbar-track {{
+            background: rgba(0,0,0,0.1);
         }}
         
-        .toc ul {{
-            list-style: none;
-            padding-left: 0;
+        .sidebar::-webkit-scrollbar-thumb,
+        .main-content::-webkit-scrollbar-thumb {{
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
         }}
         
-        .toc li {{
-            margin-bottom: 8px;
+        .sidebar::-webkit-scrollbar-thumb:hover,
+        .main-content::-webkit-scrollbar-thumb:hover {{
+            background: rgba(255,255,255,0.5);
         }}
         
-        .toc a {{
-            color: #667eea;
-            font-weight: 500;
-        }}
-        
-        .footer {{
-            background: #2d2d2d;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            margin-top: 40px;
-        }}
-        
-        .footer a {{
-            color: #667eea;
-        }}
-        
+        /* 移动端适配 */
         @media (max-width: 768px) {{
-            .content {{
+            .app-container {{
+                flex-direction: column;
+            }}
+            
+            .sidebar {{
+                width: 100%;
+                height: auto;
+                max-height: 40vh;
+            }}
+            
+            .content-wrapper {{
                 padding: 20px;
             }}
             
-            .header h1 {{
-                font-size: 1.8em;
-            }}
-            
-            .header {{
-                padding: 30px 20px;
+            .content-header h1 {{
+                font-size: 1.5em;
             }}
         }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>{title}</h1>
-            <div class="subtitle">{subtitle}</div>
+    <div class="app-container">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>📚 AutoGo ScriptEngine</h1>
+                <div class="subtitle">JavaScript & Lua 脚本引擎</div>
+            </div>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="🔍 搜索文档..." oninput="handleSearch(this.value)">
+            </div>
+            <div class="search-results" id="search-results"></div>
+            <div class="sidebar-content">
+                {sidebar_content}
+            </div>
         </div>
-        <div class="content">
-            {content}
-        </div>
-        <div class="footer">
-            <p>AutoGo ScriptEngine - JavaScript & Lua 脚本引擎</p>
+        
+        <!-- 右侧内容区 -->
+        <div class="main-content">
+            <div class="content-wrapper">
+                <div id="content-area">
+                    <!-- 内容将通过 JavaScript 动态加载 -->
+                </div>
+            </div>
         </div>
     </div>
+    
+    <script>
+        // 文档数据
+        const documents = {documents_data};
+        
+        // 当前选中的文档
+        let currentDoc = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {{
+            // 默认加载第一个文档
+            const firstDoc = Object.keys(documents)[0];
+            if (firstDoc) {{
+                loadDocument(firstDoc);
+            }}
+        }});
+        
+        // 加载文档
+        function loadDocument(docId) {{
+            const doc = documents[docId];
+            if (!doc) return;
+            
+            // 更新侧边栏选中状态
+            document.querySelectorAll('.sidebar-menu-item').forEach(item => {{
+                item.classList.remove('active');
+            }});
+            const activeItem = document.querySelector(`[data-doc-id="${{docId}}"]`);
+            if (activeItem) {{
+                activeItem.classList.add('active');
+            }}
+            
+            // 更新内容区
+            const contentArea = document.getElementById('content-area');
+            contentArea.innerHTML = `
+                <div class="content-header">
+                    <h1>${{doc.title}}</h1>
+                    <div class="breadcrumb">${{doc.breadcrumb}}</div>
+                </div>
+                ${{doc.content}}
+            `;
+            
+            // 滚动到顶部
+            document.querySelector('.main-content').scrollTop = 0;
+            
+            currentDoc = docId;
+        }}
+        
+        // 搜索功能
+        function handleSearch(query) {{
+            const searchResults = document.getElementById('search-results');
+            
+            if (!query.trim()) {{
+                searchResults.classList.remove('show');
+                return;
+            }}
+            
+            query = query.toLowerCase();
+            const results = [];
+            
+            // 搜索文档标题和内容
+            for (const [docId, doc] of Object.entries(documents)) {{
+                // 搜索标题
+                if (doc.title.toLowerCase().includes(query)) {{
+                    results.push({{
+                        docId: docId,
+                        title: doc.title,
+                        path: doc.breadcrumb,
+                        matchType: 'title'
+                    }});
+                }}
+                // 搜索内容
+                else if (doc.content.toLowerCase().includes(query)) {{
+                    results.push({{
+                        docId: docId,
+                        title: doc.title,
+                        path: doc.breadcrumb,
+                        matchType: 'content'
+                    }});
+                }}
+            }}
+            
+            // 显示搜索结果
+            if (results.length > 0) {{
+                searchResults.innerHTML = results.map(result => `
+                    <div class="search-result-item" onclick="loadDocument('${{result.docId}}')">
+                        <div class="title">${{result.title}}</div>
+                        <div class="path">${{result.path}}</div>
+                    </div>
+                `).join('');
+                searchResults.classList.add('show');
+            }} else {{
+                searchResults.innerHTML = '<div style="padding: 10px 20px; opacity: 0.7;">未找到相关文档</div>';
+                searchResults.classList.add('show');
+            }}
+        }}
+    </script>
 </body>
 </html>
 """
 
-def convert_markdown_to_html(md_path, html_path):
-    """将 Markdown 文件转换为 HTML 文件"""
+def convert_markdown_to_html(md_path):
+    """将 Markdown 文件转换为 HTML 内容"""
     try:
         # 读取 Markdown 文件
         with open(md_path, 'r', encoding='utf-8') as f:
@@ -289,7 +526,6 @@ def convert_markdown_to_html(md_path, html_path):
                 'tables',
                 'fenced_code',
                 'codehilite',
-                'toc',
                 'nl2br',
                 'sane_lists'
             ]
@@ -299,45 +535,106 @@ def convert_markdown_to_html(md_path, html_path):
         title_match = re.search(r'^#\s+(.+)$', md_content, re.MULTILINE)
         title = title_match.group(1) if title_match else '文档'
         
-        # 生成副标题
-        subtitle = f"来源: {md_path}"
-        
-        # 填充模板
-        html = HTML_TEMPLATE.format(
-            title=title,
-            subtitle=subtitle,
-            content=html_content
-        )
-        
-        # 确保目标目录存在
-        os.makedirs(os.path.dirname(html_path), exist_ok=True)
-        
-        # 写入 HTML 文件
-        with open(html_path, 'w', encoding='utf-8') as f:
-            f.write(html)
-        
-        print(f"✓ 已转换: {md_path} -> {html_path}")
-        return True
+        return {
+            'title': title,
+            'content': html_content
+        }
     except Exception as e:
         print(f"✗ 转换失败: {md_path} - {str(e)}")
-        return False
+        return None
 
 def find_all_readmes(root_dir):
     """查找所有 README.md 文件"""
     readmes = []
     for root, dirs, files in os.walk(root_dir):
         # 跳过隐藏目录和特定目录
-        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['docs', 'node_modules', '.git']]
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['docs', 'node_modules', '.git', 'scripts']]
         
         for file in files:
             if file.lower() == 'readme.md':
                 readmes.append(os.path.join(root, file))
     return readmes
 
+def generate_sidebar(project_root, readmes):
+    """生成侧边栏内容"""
+    # 按目录分组
+    grouped = {}
+    for md_path in readmes:
+        rel_path = os.path.relpath(md_path, project_root)
+        dir_name = os.path.dirname(rel_path)
+        
+        if dir_name not in grouped:
+            grouped[dir_name] = []
+        grouped[dir_name].append(rel_path)
+    
+    # 生成侧边栏 HTML
+    sidebar_html = ''
+    
+    # 定义图标
+    icons = {
+        '.': '🏠',
+        'js_engine': '⚡',
+        'lua_engine': '🌙',
+        'js_engine/model': '📦',
+        'lua_engine/model': '📦'
+    }
+    
+    # 按目录排序
+    sorted_dirs = sorted(grouped.keys())
+    
+    # 根目录优先
+    if '.' in sorted_dirs:
+        sorted_dirs.remove('.')
+        sorted_dirs.insert(0, '.')
+    
+    for dir_name in sorted_dirs:
+        icon = icons.get(dir_name, '📄')
+        display_name = dir_name if dir_name != '.' else '根目录'
+        
+        sidebar_html += f'<div class="sidebar-section">\n'
+        sidebar_html += f'<div class="sidebar-section-title">{icon} {display_name}</div>\n'
+        sidebar_html += f'<ul class="sidebar-menu">\n'
+        
+        for file_path in sorted(grouped[dir_name]):
+            # 生成文档 ID
+            doc_id = file_path.replace('/', '_').replace('.md', '')
+            
+            # 文件名
+            file_name = os.path.basename(file_path)
+            display_name = file_name.replace('.md', '')
+            
+            sidebar_html += f'  <li class="sidebar-menu-item" data-doc-id="{doc_id}" onclick="loadDocument(\'{doc_id}\')">\n'
+            sidebar_html += f'    <span class="icon">📄</span>{display_name}\n'
+            sidebar_html += f'  </li>\n'
+        
+        sidebar_html += f'</ul>\n'
+        sidebar_html += f'</div>\n'
+    
+    return sidebar_html
+
+def generate_documents_data(project_root, readmes):
+    """生成文档数据"""
+    documents = {}
+    
+    for md_path in readmes:
+        rel_path = os.path.relpath(md_path, project_root)
+        doc_id = rel_path.replace('/', '_').replace('.md', '')
+        
+        # 转换 Markdown
+        doc_data = convert_markdown_to_html(md_path)
+        if doc_data:
+            documents[doc_id] = {
+                'title': doc_data['title'],
+                'breadcrumb': rel_path,
+                'content': doc_data['content']
+            }
+    
+    return documents
+
 def main():
     """主函数"""
     print("=" * 60)
-    print("Markdown 转 HTML 转换工具")
+    print("Markdown 转 HTML 转换工具（带侧边栏版本）")
     print("=" * 60)
     
     # 获取项目根目录
@@ -352,79 +649,38 @@ def main():
     print(f"找到 {len(readmes)} 个 README.md 文件\n")
     
     # 转换所有文件
-    success_count = 0
-    fail_count = 0
+    print("正在转换文档...")
+    documents_data = generate_documents_data(project_root, readmes)
+    print(f"成功转换 {len(documents_data)} 个文档\n")
     
-    for md_path in readmes:
-        # 计算相对路径
-        rel_path = os.path.relpath(md_path, project_root)
-        
-        # 生成 HTML 文件路径
-        html_path = os.path.join(
-            project_root,
-            'docs',
-            rel_path.replace('.md', '.html')
-        )
-        
-        if convert_markdown_to_html(md_path, html_path):
-            success_count += 1
-        else:
-            fail_count += 1
+    # 生成侧边栏
+    print("正在生成侧边栏...")
+    sidebar_content = generate_sidebar(project_root, readmes)
     
-    # 生成索引页面
-    print("\n正在生成文档索引...")
-    generate_index(project_root, readmes)
+    # 生成 HTML
+    print("正在生成 HTML 文件...")
+    html = HTML_TEMPLATE.format(
+        sidebar_content=sidebar_content,
+        documents_data=json.dumps(documents_data, ensure_ascii=False)
+    )
+    
+    # 保存 HTML 文件
+    docs_dir = os.path.join(project_root, 'docs')
+    os.makedirs(docs_dir, exist_ok=True)
+    
+    output_path = os.path.join(docs_dir, 'index.html')
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(html)
+    
+    print(f"✓ 已生成: {output_path}")
     
     # 输出统计信息
     print("\n" + "=" * 60)
     print("转换完成！")
-    print(f"成功: {success_count} 个")
-    print(f"失败: {fail_count} 个")
-    print(f"总计: {len(readmes)} 个")
+    print(f"文档数量: {len(documents_data)} 个")
     print("=" * 60)
-    print(f"\nHTML 文档已保存到: {os.path.join(project_root, 'docs')}")
-
-def generate_index(project_root, readmes):
-    """生成文档索引页面"""
-    # 按目录分组
-    grouped = {}
-    for md_path in readmes:
-        rel_path = os.path.relpath(md_path, project_root)
-        dir_name = os.path.dirname(rel_path)
-        
-        if dir_name not in grouped:
-            grouped[dir_name] = []
-        grouped[dir_name].append(rel_path)
-    
-    # 生成 HTML 内容
-    index_content = "<h2>文档索引</h2>\n"
-    
-    # 按目录排序
-    for dir_name in sorted(grouped.keys()):
-        index_content += f"<h3>{dir_name if dir_name != '.' else '根目录'}</h3>\n<ul>\n"
-        
-        for file_path in sorted(grouped[dir_name]):
-            html_path = file_path.replace('.md', '.html')
-            file_name = os.path.basename(file_path)
-            index_content += f'  <li><a href="{html_path}">{file_name}</a></li>\n'
-        
-        index_content += "</ul>\n"
-    
-    # 生成索引页面
-    index_html = HTML_TEMPLATE.format(
-        title="AutoGo ScriptEngine 文档索引",
-        subtitle="所有文档的导航页面",
-        content=index_content
-    )
-    
-    # 保存索引页面
-    index_path = os.path.join(project_root, 'docs', 'index.html')
-    os.makedirs(os.path.dirname(index_path), exist_ok=True)
-    
-    with open(index_path, 'w', encoding='utf-8') as f:
-        f.write(index_html)
-    
-    print(f"✓ 已生成索引页面: {index_path}")
+    print(f"\nHTML 文档已保存到: {output_path}")
+    print("\n使用浏览器打开该文件即可查看文档！")
 
 if __name__ == '__main__':
     main()
