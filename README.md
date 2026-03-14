@@ -110,6 +110,39 @@ python3 scripts/convert_to_html.py
 - AutoGo 框架（已在项目中集成）
 - Android 设备（用于实际运行自动化脚本）
 
+## 兼容性说明
+
+### Android 版本兼容性
+
+某些依赖包在特定的 Android 版本下可能会出现内存引用错误（Memory Reference Error）。如果遇到此类问题，可以尝试以下解决方案：
+
+1. **修改引入的包**：根据您的 Android 版本，可以修改项目中引入的相关包
+2. **禁用问题模块**：在引擎配置中禁用导致问题的特定模块
+3. **使用替代方案**：某些功能可能有多种实现方式，可以尝试使用替代方案
+
+### Windows 开发环境
+
+在 Windows 环境下开发时，如果引入了某些使用 C 语言的包，可能会遇到以下错误：
+
+```
+The command line is too long.
+```
+
+这是 Windows 命令行长度限制导致的。解决方案：
+
+1. **避免引入问题包**：尽量减少使用包含 C 代码的依赖包
+2. **使用 WSL**：在 Windows Subsystem for Linux (WSL) 环境中开发
+3. **调整项目结构**：将项目拆分为多个子项目，减少单个项目的依赖复杂度
+
+### 常见问题处理
+
+如果遇到兼容性问题，建议：
+
+1. 检查您的 Android 设备版本和 SDK 版本
+2. 查看项目的 GitHub Issues，了解已知的兼容性问题
+3. 根据错误信息调整配置或代码
+4. 如有必要，可以 Fork 项目并根据您的环境进行修改
+
 ## 依赖
 
 - [AutoGo](https://github.com/Dasongzi1366/AutoGo) - Android 自动化框架（核心依赖）
