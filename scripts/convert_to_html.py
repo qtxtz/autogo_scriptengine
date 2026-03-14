@@ -46,6 +46,52 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .app-container {{
             display: flex;
             height: 100vh;
+            position: relative;
+        }}
+        
+        /* 左侧边栏触发区域 */
+        .sidebar-trigger-wrapper {{
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 100px;
+            z-index: 1001;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }}
+        
+        .sidebar-trigger-wrapper:hover {{
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.3);
+        }}
+        
+        .sidebar-trigger-wrapper::after {{
+            content: '☰';
+            font-size: 24px;
+            color: white;
+            writing-mode: horizontal-tb;
+            text-orientation: upright;
+            position: absolute;
+            left: 10px;
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: translateX(0);
+        }}
+        
+        .sidebar-trigger-wrapper.hidden {{
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
+        }}
+        
+        .sidebar-trigger-wrapper.hidden::after {{
+            opacity: 0;
+            transform: translateX(-20px);
         }}
         
         /* 左侧边栏 */
@@ -56,6 +102,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             overflow-y: auto;
             flex-shrink: 0;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transition: width 0.3s ease;
+            position: relative;
+        }}
+        
+        .sidebar.collapsed {{
+            width: 0;
+            overflow: hidden;
         }}
         
         .sidebar-header {{
@@ -184,6 +237,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             overflow-y: auto;
             padding: 40px;
             position: relative;
+            z-index: 1;
         }}
         
         .content-wrapper {{
@@ -193,6 +247,56 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             padding: 50px;
+            position: relative;
+            z-index: 1;
+        }}
+        
+        /* 右侧目录触发区域 */
+        .toc-trigger-wrapper {{
+            position: fixed;
+            right: 0;
+            top: 100px;
+            bottom: 0;
+            width: 100px;
+            z-index: 1001;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            background: white;
+            border: 2px solid #667eea;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-radius: 8px 0 0 8px;
+        }}
+        
+        .toc-trigger-wrapper:hover {{
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.2);
+        }}
+        
+        .toc-trigger-wrapper::after {{
+            content: '≡';
+            font-size: 24px;
+            color: #667eea;
+            writing-mode: horizontal-tb;
+            text-orientation: upright;
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: translateX(0);
+        }}
+        
+        .toc-trigger-wrapper.hidden {{
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
+        }}
+        
+        .toc-trigger-wrapper.hidden::after {{
+            opacity: 0;
+            transform: translateX(20px);
         }}
         
         /* 悬浮目录 */
@@ -209,10 +313,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 15px;
             z-index: 1000;
             display: none;
+            transition: all 0.3s ease;
         }}
         
         .toc-float.show {{
             display: block;
+        }}
+        
+        .toc-float.collapsed {{
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+            border-radius: 8px 0 0 8px;
         }}
         
         .toc-float-header {{
@@ -477,9 +589,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </style>
 </head>
 <body>
+    <!-- 左侧边栏触发区域 -->
+    <div class="sidebar-trigger-wrapper" id="sidebar-trigger" title="鼠标悬停展开"></div>
+    
     <div class="app-container">
         <!-- 左侧边栏 -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>📚 AutoGo ScriptEngine</h1>
                 <div class="subtitle">JavaScript & Lua 脚本引擎</div>
@@ -510,6 +625,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
     </div>
     
+    <!-- 右侧目录触发区域 -->
+    <div class="toc-trigger-wrapper" id="toc-trigger" title="鼠标悬停展开"></div>
+    
     <script>
         // 文档数据
         const documents = {documents_data};
@@ -524,7 +642,63 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (firstDoc) {{
                 loadDocument(firstDoc);
             }}
+            
+            // 初始化侧边栏自动收起/展开功能
+            initSidebarAutoToggle();
+            
+            // 初始化右侧目录自动收起/展开功能
+            initTOCAutoToggle();
         }});
+        
+        // 初始化侧边栏自动收起/展开功能
+        function initSidebarAutoToggle() {{
+            const sidebar = document.getElementById('sidebar');
+            const trigger = document.getElementById('sidebar-trigger');
+            let hideTimeout;
+            
+            // 鼠标进入触发区域，展开侧边栏
+            trigger.addEventListener('mouseenter', function() {{
+                clearTimeout(hideTimeout);
+                sidebar.classList.remove('collapsed');
+                trigger.classList.add('hidden');
+            }});
+            
+            // 鼠标离开侧边栏，延迟收起
+            sidebar.addEventListener('mouseleave', function() {{
+                hideTimeout = setTimeout(function() {{
+                    sidebar.classList.add('collapsed');
+                    trigger.classList.remove('hidden');
+                }}, 300);
+            }});
+            
+            // 初始状态：收起侧边栏
+            sidebar.classList.add('collapsed');
+        }}
+        
+        // 初始化右侧目录自动收起/展开功能
+        function initTOCAutoToggle() {{
+            const tocFloat = document.getElementById('toc-float');
+            const trigger = document.getElementById('toc-trigger');
+            let hideTimeout;
+            
+            // 鼠标进入触发区域，展开目录
+            trigger.addEventListener('mouseenter', function() {{
+                clearTimeout(hideTimeout);
+                tocFloat.classList.remove('collapsed');
+                trigger.classList.add('hidden');
+            }});
+            
+            // 鼠标离开目录，延迟收起
+            tocFloat.addEventListener('mouseleave', function() {{
+                hideTimeout = setTimeout(function() {{
+                    tocFloat.classList.add('collapsed');
+                    trigger.classList.remove('hidden');
+                }}, 300);
+            }});
+            
+            // 初始状态：收起目录
+            tocFloat.classList.add('collapsed');
+        }}
         
         // 加载文档
         function loadDocument(docId, headingId = null) {{
