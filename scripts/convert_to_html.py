@@ -178,62 +178,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             opacity: 0.7;
         }}
         
-        .sidebar-menu-item .toggle-icon {{
-            float: right;
-            transition: transform 0.3s ease;
-            opacity: 0.7;
-        }}
-        
-        .sidebar-menu-item.expanded .toggle-icon {{
-            transform: rotate(90deg);
-        }}
-        
-        .sidebar-submenu {{
-            display: none;
-            padding-left: 20px;
-            background: rgba(0,0,0,0.1);
-        }}
-        
-        .sidebar-submenu.show {{
-            display: block;
-        }}
-        
-        .sidebar-submenu-item {{
-            padding: 8px 20px 8px 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.85em;
-            border-left: 2px solid transparent;
-        }}
-        
-        .sidebar-submenu-item:hover {{
-            background: rgba(255,255,255,0.05);
-            border-left-color: rgba(255,255,255,0.3);
-        }}
-        
-        .sidebar-submenu-item.active {{
-            background: rgba(255,255,255,0.1);
-            border-left-color: white;
-            font-weight: 500;
-        }}
-        
-        .sidebar-submenu-item.level-2 {{
-            padding-left: 40px;
-            font-size: 0.8em;
-            opacity: 0.9;
-        }}
-        
-        .sidebar-submenu-item.level-3 {{
-            padding-left: 50px;
-            font-size: 0.75em;
-            opacity: 0.8;
-        }}
-        
         /* 右侧内容区 */
         .main-content {{
             flex: 1;
             overflow-y: auto;
             padding: 40px;
+            position: relative;
         }}
         
         .content-wrapper {{
@@ -243,6 +193,91 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             padding: 50px;
+        }}
+        
+        /* 悬浮目录 */
+        .toc-float {{
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            width: 250px;
+            max-height: 70vh;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 15px;
+            z-index: 1000;
+            display: none;
+        }}
+        
+        .toc-float.show {{
+            display: block;
+        }}
+        
+        .toc-float-header {{
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+            font-size: 0.95em;
+        }}
+        
+        .toc-float-item {{
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 2px solid transparent;
+            font-size: 0.85em;
+            line-height: 1.4;
+        }}
+        
+        .toc-float-item:hover {{
+            background: #f8f9fa;
+            border-left-color: #667eea;
+        }}
+        
+        .toc-float-item.level-1 {{
+            font-weight: 600;
+            color: #667eea;
+        }}
+        
+        .toc-float-item.level-2 {{
+            padding-left: 20px;
+            font-weight: 500;
+            color: #555;
+        }}
+        
+        .toc-float-item.level-3 {{
+            padding-left: 35px;
+            font-weight: 400;
+            color: #666;
+            font-size: 0.9em;
+        }}
+        
+        .toc-float-item.level-4 {{
+            padding-left: 50px;
+            font-weight: 400;
+            color: #777;
+            font-size: 0.85em;
+        }}
+        
+        .toc-float::-webkit-scrollbar {{
+            width: 6px;
+        }}
+        
+        .toc-float::-webkit-scrollbar-track {{
+            background: #f1f1f1;
+        }}
+        
+        .toc-float::-webkit-scrollbar-thumb {{
+            background: #667eea;
+            border-radius: 3px;
+        }}
+        
+        .toc-float::-webkit-scrollbar-thumb:hover {{
+            background: #764ba2;
         }}
         
         .content-header {{
@@ -434,6 +469,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             .content-header h1 {{
                 font-size: 1.5em;
             }}
+            
+            .toc-float {{
+                display: none !important;
+            }}
         }}
     </style>
 </head>
@@ -461,6 +500,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <!-- 内容将通过 JavaScript 动态加载 -->
                 </div>
             </div>
+            <!-- 悬浮目录 -->
+            <div class="toc-float" id="toc-float">
+                <div class="toc-float-header">📋 目录</div>
+                <div id="toc-float-content">
+                    <!-- 目录内容将通过 JavaScript 动态生成 -->
+                </div>
+            </div>
         </div>
     </div>
     
@@ -486,7 +532,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (!doc) return;
             
             // 更新侧边栏选中状态
-            document.querySelectorAll('.sidebar-menu-item, .sidebar-submenu-item').forEach(item => {{
+            document.querySelectorAll('.sidebar-menu-item').forEach(item => {{
                 item.classList.remove('active');
             }});
             
@@ -520,6 +566,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             // 为所有标题添加 ID，方便跳转
             addHeadingIds();
             
+            // 生成右侧悬浮目录
+            generateFloatingTOC(doc.headings);
+            
             // 滚动到顶部
             if (!headingId) {{
                 document.querySelector('.main-content').scrollTop = 0;
@@ -538,14 +587,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }});
         }}
         
-        // 展开/折叠子菜单
-        function toggleSubmenu(menuId) {{
-            const submenu = document.getElementById('submenu-' + menuId);
-            const toggleIcon = document.getElementById('toggle-' + menuId);
+        // 生成右侧悬浮目录
+        function generateFloatingTOC(headings) {{
+            const tocFloat = document.getElementById('toc-float');
+            const tocContent = document.getElementById('toc-float-content');
             
-            if (submenu) {{
-                submenu.classList.toggle('show');
-                toggleIcon.classList.toggle('expanded');
+            if (!headings || headings.length === 0) {{
+                tocFloat.classList.remove('show');
+                return;
+            }}
+            
+            // 生成目录 HTML
+            let tocHTML = '';
+            headings.forEach(heading => {{
+                const level = heading.level;
+                const text = heading.text;
+                const id = heading.id;
+                
+                tocHTML += `<div class="toc-float-item level-${{level}}" onclick="scrollToHeading('${{id}}')">${{text}}</div>`;
+            }});
+            
+            tocContent.innerHTML = tocHTML;
+            tocFloat.classList.add('show');
+        }}
+        
+        // 滚动到指定标题
+        function scrollToHeading(headingId) {{
+            const headingElement = document.getElementById(headingId);
+            if (headingElement) {{
+                headingElement.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
             }}
         }}
         
@@ -705,39 +775,11 @@ def generate_sidebar(project_root, readmes, documents_data):
             # 获取文档数据
             doc_data = documents_data.get(doc_id, {})
             doc_title = doc_data.get('title', '文档')
-            headings = doc_data.get('headings', [])
             
             # 生成菜单项
             sidebar_html += f'  <li class="sidebar-menu-item" data-doc-id="{doc_id}" onclick="loadDocument(\'{doc_id}\')">\n'
-            
-            # 如果有子标题，添加展开图标
-            if headings:
-                menu_id = doc_id.replace('_', '-')
-                sidebar_html += f'    <span class="icon">📄</span>{doc_title}\n'
-                sidebar_html += f'    <span class="toggle-icon" id="toggle-{menu_id}" onclick="event.stopPropagation(); toggleSubmenu(\'{menu_id}\')">▶</span>\n'
-            else:
-                sidebar_html += f'    <span class="icon">📄</span>{doc_title}\n'
-            
+            sidebar_html += f'    <span class="icon">📄</span>{doc_title}\n'
             sidebar_html += f'  </li>\n'
-            
-            # 如果有子标题，生成子菜单
-            if headings:
-                sidebar_html += f'  <ul class="sidebar-submenu" id="submenu-{menu_id}">\n'
-                
-                for heading in headings:
-                    level = heading['level']
-                    text = heading['text']
-                    heading_id = heading['id']
-                    
-                    # 根据级别设置缩进
-                    level_class = f"level-{level}" if level > 1 else ""
-                    indent = "  " * (level - 1)
-                    
-                    sidebar_html += f'    <li class="sidebar-submenu-item {level_class}" data-doc-id="{doc_id}" onclick="loadDocument(\'{doc_id}\', \'{heading_id}\')">\n'
-                    sidebar_html += f'      {indent}{text}\n'
-                    sidebar_html += f'    </li>\n'
-                
-                sidebar_html += f'  </ul>\n'
         
         sidebar_html += f'</ul>\n'
         sidebar_html += f'</div>\n'
