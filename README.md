@@ -106,7 +106,7 @@ python3 scripts/convert_to_html.py
 
 ## 环境要求
 
-- Go 1.25.4 或更高版本
+- Go 1.25.0 或更高版本
 - AutoGo 框架（已在项目中集成）
 - Android 设备（用于实际运行自动化脚本）
 
@@ -136,31 +136,15 @@ The command line is too long.
 2. **减少依赖库的引用**：遇到问题时，仅保留刚需依赖库，使用白名单手动指定需要加载的模块
 3. **切换开发环境**：使用 macOS 或 Linux 系统进行编译
 
-**示例：使用白名单手动指定依赖**
-
-```go
-// JavaScript 引擎示例
-import "github.com/ZingYao/autogo_scriptengine/js_engine"
-
-config := js_engine.DefaultConfig()
-config.WhiteList = []string{"app", "device", "motion"}  // 只加载必需的模块
-engine := js_engine.NewEngine(&config)
-```
-
-```go
-// Lua 引擎示例
-import "github.com/ZingYao/autogo_scriptengine/lua_engine"
-
-config := lua_engine.DefaultConfig()
-config.WhiteList = []string{"app", "device", "motion"}  // 只加载必需的模块
-engine := lua_engine.NewLuaEngine(&config)
-```
-
 **建议的开发流程**：
 
 1. 在 Windows 环境下开发时，只启用核心模块（如 app、device、motion）
 2. 需要使用其他模块时，临时切换到 macOS/Linux 环境编译
 3. 或者使用 WSL (Windows Subsystem for Linux) 环境进行开发
+
+详细的白名单使用示例和模块依赖列表，请查看：
+- [JavaScript 引擎文档](./js_engine/README.md) - 包含完整的白名单使用示例
+- [Lua 引擎文档](./lua_engine/README.md) - 包含完整的白名单使用示例
 
 ### 常见问题处理
 
