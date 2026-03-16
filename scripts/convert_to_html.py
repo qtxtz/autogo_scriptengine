@@ -309,30 +309,43 @@ def find_all_readmes(root_dir):
 
 def generate_sidebar_content(project_root, readmes):
     """生成侧边栏内容"""
-    # 按目录分组
-    grouped = {}
-    for md_path in readmes:
-        rel_path = os.path.relpath(md_path, project_root)
-        dir_name = os.path.dirname(rel_path)
-        
-        if dir_name not in grouped:
-            grouped[dir_name] = []
-        grouped[dir_name].append(rel_path)
-    
     # 生成 API 文档部分
     api_docs = []
     
     # 处理 js_engine 模块
-    if 'js_engine/model' in grouped:
-        for file_path in sorted(grouped['js_engine/model']):
-            module_name = os.path.basename(os.path.dirname(file_path))
-            api_docs.append(f"  - [js/{module_name}]({file_path})")
-    
+    js_modules = []
     # 处理 lua_engine 模块
-    if 'lua_engine/model' in grouped:
-        for file_path in sorted(grouped['lua_engine/model']):
-            module_name = os.path.basename(os.path.dirname(file_path))
-            api_docs.append(f"  - [lua/{module_name}]({file_path})")
+    lua_modules = []
+    
+    for md_path in readmes:
+        rel_path = os.path.relpath(md_path, project_root)
+        
+        # 检查是否是 js_engine/model 下的模块
+        if rel_path.startswith('js_engine/model/') and not rel_path.endswith('js_engine/model/README.md'):
+            # 提取模块名称
+            parts = rel_path.split('/')
+            if len(parts) >= 3:
+                module_name = parts[2]
+                js_modules.append((module_name, rel_path))
+        
+        # 检查是否是 lua_engine/model 下的模块
+        if rel_path.startswith('lua_engine/model/') and not rel_path.endswith('lua_engine/model/README.md'):
+            # 提取模块名称
+            parts = rel_path.split('/')
+            if len(parts) >= 3:
+                module_name = parts[2]
+                lua_modules.append((module_name, rel_path))
+    
+    # 按模块名称排序
+    js_modules.sort()
+    lua_modules.sort()
+    
+    # 添加到 API 文档列表
+    for module_name, file_path in js_modules:
+        api_docs.append(f"  - [js/{module_name}]({file_path})")
+    
+    for module_name, file_path in lua_modules:
+        api_docs.append(f"  - [lua/{module_name}]({file_path})")
     
     return '\n'.join(api_docs)
 
