@@ -73,32 +73,32 @@ err = engine.ExecuteFile("scripts/script.lua")
 
 ## 模块列表
 
-| 模块 | 说明 | 详细文档 |
-|------|------|----------|
-| `app` | 应用管理 | [README](model/app/README.md) |
-| `device` | 设备信息 | [README](model/device/README.md) |
-| `motion` | 触摸操作 | [README](model/motion/README.md) |
-| `files` | 文件操作 | [README](model/files/README.md) |
-| `images` | 图像处理 | [README](model/images/README.md) |
-| `storages` | 数据存储 | [README](model/storages/README.md) |
-| `system` | 系统功能 | [README](model/system/README.md) |
-| `http` | 网络请求 | [README](model/http/README.md) |
-| `media` | 媒体控制 | [README](model/media/README.md) |
-| `opencv` | 计算机视觉 | [README](model/opencv/README.md) |
-| `ppocr` | OCR 文字识别 | [README](model/ppocr/README.md) |
-| `console` | 控制台窗口 | [README](model/console/README.md) |
-| `coroutine` | 协程管理 | [README](model/coroutine/README.md) |
-| `dotocr` | 点字 OCR | [README](model/dotocr/README.md) |
-| `hud` | HUD 悬浮显示 | [README](model/hud/README.md) |
-| `ime` | 输入法控制 | [README](model/ime/README.md) |
-| `plugin` | 插件加载 | [README](model/plugin/README.md) |
-| `rhino` | JavaScript 执行引擎 | [README](model/rhino/README.md) |
-| `uiacc` | 无障碍 UI 操作 | [README](model/uiacc/README.md) |
-| `utils` | 工具方法 | [README](model/utils/README.md) |
-| `vdisplay` | 虚拟显示 | [README](model/vdisplay/README.md) |
-| `yolo` | YOLO 目标检测 | [README](model/yolo/README.md) |
-| `imgui` | Dear ImGui GUI 库 | [README](model/imgui/README.md) |
-| `json` | JSON 处理 | [README](model/json/README.md) |
+| 模块          | 说明               | 详细文档                                |
+| ----------- | ---------------- | ----------------------------------- |
+| `app`       | 应用管理             | [README](model/app/README.md)       |
+| `device`    | 设备信息             | [README](model/device/README.md)    |
+| `motion`    | 触摸操作             | [README](model/motion/README.md)    |
+| `files`     | 文件操作             | [README](model/files/README.md)     |
+| `images`    | 图像处理             | [README](model/images/README.md)    |
+| `storages`  | 数据存储             | [README](model/storages/README.md)  |
+| `system`    | 系统功能             | [README](model/system/README.md)    |
+| `http`      | 网络请求             | [README](model/http/README.md)      |
+| `media`     | 媒体控制             | [README](model/media/README.md)     |
+| `opencv`    | 计算机视觉            | [README](model/opencv/README.md)    |
+| `ppocr`     | OCR 文字识别         | [README](model/ppocr/README.md)     |
+| `console`   | 控制台窗口            | [README](model/console/README.md)   |
+| `coroutine` | 协程管理             | [README](model/coroutine/README.md) |
+| `dotocr`    | 点字 OCR           | [README](model/dotocr/README.md)    |
+| `hud`       | HUD 悬浮显示         | [README](model/hud/README.md)       |
+| `ime`       | 输入法控制            | [README](model/ime/README.md)       |
+| `plugin`    | 插件加载             | [README](model/plugin/README.md)    |
+| `rhino`     | JavaScript 执行引擎  | [README](model/rhino/README.md)     |
+| `uiacc`     | 无障碍 UI 操作        | [README](model/uiacc/README.md)     |
+| `utils`     | 工具方法             | [README](model/utils/README.md)     |
+| `vdisplay`  | 虚拟显示             | [README](model/vdisplay/README.md)  |
+| `yolo`      | YOLO 目标检测        | [README](model/yolo/README.md)      |
+| `imgui`     | Dear ImGui GUI 库 | [README](model/imgui/README.md)     |
+| `json`      | JSON 处理          | [README](model/json/README.md)      |
 
 ## DemoCode
 
@@ -219,6 +219,7 @@ func main() {
 ### 4. Main 脚本加载 Model 脚本并运行
 
 **main.lua** (主脚本)
+
 ```lua
 -- main.lua - 主脚本，加载并调用 model 脚本
 
@@ -235,6 +236,7 @@ console.log("=== 主脚本执行完成 ===")
 ```
 
 **model.lua** (模型脚本)
+
 ```lua
 -- model.lua - 模型脚本
 
@@ -255,6 +257,7 @@ return M
 ```
 
 **Go 代码**
+
 ```go
 package main
 
@@ -293,23 +296,24 @@ func main() {
 
 ### 引擎方法
 
-| 方法 | 说明 |
-|------|------|
-| `NewLuaEngine(config *EngineConfig) *LuaEngine` | 创建新的 Lua 引擎实例 |
-| `GetState() *lua.LState` | 获取 Lua 状态对象 |
-| `InjectModule(moduleName string)` | 注入指定模块 |
-| `InjectModules(modules []string)` | 注入多个模块 |
-| `GetAvailableModules() []string` | 获取所有可用模块列表 |
-| `InjectAllMethods()` | 注入所有模块的方法 |
-| `RegisterMethod(name, description string, goFunc interface{}, overridable bool)` | 注册自定义方法 |
-| `ExecuteString(script string, searchPaths ...string) error` | 执行 Lua 字符串（可指定搜索路径） |
-| `ExecuteFile(path string) error` | 执行 Lua 文件 |
-| `Close()` | 关闭引擎 |
-| `GetRegistry() *MethodRegistry` | 获取方法注册表 |
+| 方法                                                                               | 说明                  |
+| -------------------------------------------------------------------------------- | ------------------- |
+| `NewLuaEngine(config *EngineConfig) *LuaEngine`                                  | 创建新的 Lua 引擎实例       |
+| `GetState() *lua.LState`                                                         | 获取 Lua 状态对象         |
+| `InjectModule(moduleName string)`                                                | 注入指定模块              |
+| `InjectModules(modules []string)`                                                | 注入多个模块              |
+| `GetAvailableModules() []string`                                                 | 获取所有可用模块列表          |
+| `InjectAllMethods()`                                                             | 注入所有模块的方法           |
+| `RegisterMethod(name, description string, goFunc interface{}, overridable bool)` | 注册自定义方法             |
+| `ExecuteString(script string, searchPaths ...string) error`                      | 执行 Lua 字符串（可指定搜索路径） |
+| `ExecuteFile(path string) error`                                                 | 执行 Lua 文件           |
+| `Close()`                                                                        | 关闭引擎                |
+| `GetRegistry() *MethodRegistry`                                                  | 获取方法注册表             |
 
 ### 方法详细说明
 
 #### NewLuaEngine
+
 创建新的 Lua 引擎实例。
 
 ```go
@@ -318,6 +322,7 @@ engine := lua_engine.NewLuaEngine(&config)
 ```
 
 #### GetState
+
 获取 Lua 状态对象，用于直接操作 Lua 虚拟机。
 
 ```go
@@ -325,6 +330,7 @@ state := engine.GetState()
 ```
 
 #### InjectModule
+
 注入指定模块的方法到引擎中。
 
 ```go
@@ -335,6 +341,7 @@ engine.InjectModule("device")
 支持的模块：app, device, motion, files, images, storages, system, http, media, opencv, ppocr, console, coroutine, dotocr, hud, ime, plugin, rhino, uiacc, utils, vdisplay, yolo, imgui, json
 
 #### InjectModules
+
 注入多个模块的方法到引擎中。
 
 ```go
@@ -342,6 +349,7 @@ engine.InjectModules([]string{"app", "device", "motion"})
 ```
 
 #### GetAvailableModules
+
 获取所有可用模块列表。
 
 ```go
@@ -351,6 +359,7 @@ fmt.Println(modules)
 ```
 
 #### InjectAllMethods
+
 注入所有模块的方法到引擎中。
 
 ```go
@@ -358,6 +367,7 @@ engine.InjectAllMethods()
 ```
 
 #### RegisterMethod
+
 注册自定义方法到引擎中。
 
 ```go
@@ -368,12 +378,14 @@ engine.RegisterMethod("myFunction", "我的自定义函数", func(L *lua.LState)
 ```
 
 参数：
+
 - `name`: 方法名称
 - `description`: 方法描述
 - `goFunc`: Go 函数
 - `overridable`: 是否允许被 Lua 函数重写
 
 #### ExecuteString
+
 执行 Lua 代码字符串。
 
 ```go
@@ -390,10 +402,12 @@ err = engine.ExecuteString(`
 ```
 
 参数：
+
 - `script`: 要执行的 Lua 代码
 - `searchPaths`: 可选参数，添加模块搜索路径（用于 require）
 
 #### ExecuteFile
+
 执行 Lua 文件。
 
 ```go
@@ -405,9 +419,11 @@ err = engine.ExecuteFile("scripts/script.lua")
 ```
 
 参数：
+
 - `path`: 文件路径
 
 #### Close
+
 关闭引擎，释放资源。
 
 ```go
@@ -415,6 +431,7 @@ defer engine.Close()
 ```
 
 #### GetRegistry
+
 获取方法注册表，用于管理已注册的方法。
 
 ```go
@@ -423,14 +440,14 @@ registry := engine.GetRegistry()
 
 ### 配置选项
 
-| 选项 | 类型 | 说明 |
-|------|------|------|
-| `AutoInjectMethods` | bool | 是否自动注入所有方法，默认为 true |
-| `WhiteList` | []string | 白名单：只加载这些模块 |
-| `BlackList` | []string | 黑名单：跳过这些模块 |
-| `FailFast` | bool | 是否在模块加载失败时立即失败，false = 跳过失败模块继续 |
-| `SearchPaths` | []string | 模块搜索路径，用于 require 查找模块 |
-| `FileSystem` | fs.FS | 虚拟文件系统 (embed.FS)，用于从嵌入文件中加载模块 |
+| 选项                  | 类型        | 说明                              |
+| ------------------- | --------- | ------------------------------- |
+| `AutoInjectMethods` | bool      | 是否自动注入所有方法，默认为 true             |
+| `WhiteList`         | \[]string | 白名单：只加载这些模块                     |
+| `BlackList`         | \[]string | 黑名单：跳过这些模块                      |
+| `FailFast`          | bool      | 是否在模块加载失败时立即失败，false = 跳过失败模块继续 |
+| `SearchPaths`       | \[]string | 模块搜索路径，用于 require 查找模块          |
+| `FileSystem`        | fs.FS     | 虚拟文件系统 (embed.FS)，用于从嵌入文件中加载模块  |
 
 ## 兼容性说明
 
@@ -443,6 +460,7 @@ registry := engine.GetRegistry()
 3. **使用替代方案**：某些功能可能有多种实现方式，可以尝试使用替代方案
 
 示例：禁用可能导致问题的模块
+
 ```go
 config := lua_engine.DefaultConfig()
 config.BlackList = []string{"opencv", "ppocr"}  // 禁用可能导致内存问题的模块
@@ -515,32 +533,32 @@ func main() {
 
 **可用模块列表**：
 
-| 模块 | 是否包含 C 依赖 | 说明 |
-|------|----------------|------|
-| `app` | 否 | 应用管理 |
-| `device` | 否 | 设备信息 |
-| `motion` | 否 | 触摸操作 |
-| `files` | 否 | 文件操作 |
-| `images` | 否 | 图像处理 |
-| `storages` | 否 | 数据存储 |
-| `system` | 否 | 系统功能 |
-| `http` | 否 | 网络请求 |
-| `media` | 否 | 媒体控制 |
-| `console` | 否 | 控制台窗口 |
-| `coroutine` | 否 | 协程支持 |
-| `dotocr` | 否 | 点字 OCR |
-| `hud` | 否 | HUD 悬浮显示 |
-| `ime` | 否 | 输入法控制 |
-| `plugin` | 否 | 插件加载 |
-| `rhino` | 否 | JavaScript 执行引擎 |
-| `uiacc` | 否 | 无障碍 UI 操作 |
-| `utils` | 否 | 工具方法 |
-| `vdisplay` | 否 | 虚拟显示 |
-| `yolo` | 是 | YOLO 目标检测 |
-| `imgui` | 否 | Dear ImGui GUI 库 |
-| `opencv` | 是 | 计算机视觉 |
-| `ppocr` | 是 | OCR 文字识别 |
-| `json` | 否 | JSON 处理 |
+| 模块          | 是否包含 C 依赖 | 说明               |
+| ----------- | --------- | ---------------- |
+| `app`       | 否         | 应用管理             |
+| `device`    | 否         | 设备信息             |
+| `motion`    | 否         | 触摸操作             |
+| `files`     | 否         | 文件操作             |
+| `images`    | 否         | 图像处理             |
+| `storages`  | 否         | 数据存储             |
+| `system`    | 否         | 系统功能             |
+| `http`      | 否         | 网络请求             |
+| `media`     | 否         | 媒体控制             |
+| `console`   | 否         | 控制台窗口            |
+| `coroutine` | 否         | 协程支持             |
+| `dotocr`    | 否         | 点字 OCR           |
+| `hud`       | 否         | HUD 悬浮显示         |
+| `ime`       | 否         | 输入法控制            |
+| `plugin`    | 否         | 插件加载             |
+| `rhino`     | 否         | JavaScript 执行引擎  |
+| `uiacc`     | 否         | 无障碍 UI 操作        |
+| `utils`     | 否         | 工具方法             |
+| `vdisplay`  | 否         | 虚拟显示             |
+| `yolo`      | 是         | YOLO 目标检测        |
+| `imgui`     | 否         | Dear ImGui GUI 库 |
+| `opencv`    | 是         | 计算机视觉            |
+| `ppocr`     | 是         | OCR 文字识别         |
+| `json`      | 否         | JSON 处理          |
 
 ### 常见问题处理
 

@@ -6,23 +6,39 @@ import (
 	"io/fs"
 	"sync"
 
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model"
 	"github.com/dop251/goja"
+)
+
+// ExitAction 脚本退出后的动作类型
+type ExitAction int
+
+const (
+	ExitActionNone ExitAction = iota // 无动作，直接退出
+	ExitActionRestart                // 重启脚本
+	ExitActionCustom                 // 自定义动作
 )
 
 // EngineConfig 引擎配置选项
 type EngineConfig struct {
-	AutoInjectMethods bool     // 是否自动注入所有方法，默认为 true
-	WhiteList        []string // 白名单：只加载这些模块，空列表 = 加载所有
-	BlackList        []string // 黑名单：跳过这些模块，空列表 = 不跳过任何
-	FailFast        bool     // 是否在模块加载失败时立即失败，false = 跳过失败模块继续
-	FileSystem      fs.FS    // 文件系统，用于 require 功能
+	AutoInjectMethods bool       // 是否自动注入所有方法，默认为 true
+	WhiteList        []string   // 白名单：只加载这些模块，空列表 = 加载所有
+	BlackList        []string   // 黑名单：跳过这些模块，空列表 = 不跳过任何
+	FailFast         bool       // 是否在模块加载失败时立即失败，false = 跳过失败模块继续
+	FileSystem       fs.FS      // 文件系统，用于 require 功能
+	OnExit           ExitAction // 脚本退出后的动作，默认为 ExitActionNone
+	CustomExitAction func()     // 自定义退出动作函数，当 OnExit = ExitActionCustom 时调用
 }
 
 // JSEngine JavaScript 引擎
 type JSEngine struct {
-	vm     *goja.Runtime
-	mu     sync.RWMutex
-	config EngineConfig
+	vm               *goja.Runtime
+	mu               sync.RWMutex
+	config           EngineConfig
+	currentScript    string // 当前执行的脚本
+	currentDir       string // 当前脚本的目录
+	skipExitAction   bool   // 是否跳过退出动作（当 process.exit(-1) 时）
+	moduleRegistry   *model.ModuleRegistry // 模块注册表，每个引擎实例独立
 }
 
 // DefaultConfig 返回默认配置

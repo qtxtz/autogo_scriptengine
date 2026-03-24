@@ -3,6 +3,7 @@ package js_engine
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -15,26 +16,9 @@ import (
 )
 
 var (
-	engine         *JSEngine
-	once           sync.Once
-	moduleRegistry *model.ModuleRegistry
+	engine *JSEngine
+	once   sync.Once
 )
-
-func initModuleRegistry() {
-	if moduleRegistry == nil {
-		moduleRegistry = model.NewModuleRegistry()
-	}
-}
-
-// RegisterModule 注册一个或多个模块到引擎
-// 用户可以在自己的代码中调用此方法来注册需要的模块
-// 支持可变长参数，可以一次注册多个模块
-func RegisterModule(modules ...model.Module) {
-	initModuleRegistry()
-	for _, module := range modules {
-		moduleRegistry.RegisterModule(module)
-	}
-}
 
 // GetJSEngine 获取默认引擎实例（使用默认配置，自动注入所有方法）
 func GetJSEngine() *JSEngine {
@@ -42,7 +26,7 @@ func GetJSEngine() *JSEngine {
 		engine = &JSEngine{
 			config: DefaultConfig(),
 		}
-		initModuleRegistry()
+		engine.moduleRegistry = model.NewModuleRegistry()
 		engine.init()
 	})
 	return engine
@@ -64,7 +48,7 @@ func NewJSEngine(config *EngineConfig) *JSEngine {
 	e := &JSEngine{
 		config: cfg,
 	}
-	initModuleRegistry()
+	e.moduleRegistry = model.NewModuleRegistry()
 	e.init()
 	return e
 }
@@ -99,6 +83,7 @@ func (e *JSEngine) registerCoreFunctions() {
 	vm.Set("overrideMethod", e.overrideMethodJS)
 	vm.Set("restoreMethod", e.restoreMethodJS)
 	vm.Set("sleep", e.sleepJS)
+	vm.Set("load", e.loadJS)
 
 	// 注册 require 功能
 	if e.config.FileSystem != nil {
@@ -131,15 +116,73 @@ func (e *JSEngine) consoleErrorJS(call goja.FunctionCall) goja.Value {
 	return goja.Undefined()
 }
 
+func (e *JSEngine) loadJS(call goja.FunctionCall) goja.Value {
+	if len(call.Arguments) < 1 {
+		return goja.Undefined()
+	}
+
+	path := call.Argument(0).String()
+	
+	// 读取文件内容
+	var content []byte
+	var err error
+	
+	if e.config.FileSystem != nil {
+		// 使用配置的文件系统
+		content, err = fs.ReadFile(e.config.FileSystem, path)
+	} else {
+		// 使用操作系统的文件系统
+		content, err = os.ReadFile(path)
+	}
+	
+	if err != nil {
+		panic(fmt.Sprintf("failed to load file '%s': %v", path, err))
+	}
+
+	// 从路径中提取目录和文件名
+	dir := filepath.Dir(path)
+	filename := filepath.Base(path)
+
+	// 保存当前的 __dirname 和 __filename
+	oldDirname := e.vm.Get("__dirname")
+	oldFilename := e.vm.Get("__filename")
+
+	// 设置新的 __dirname 和 __filename
+	e.vm.Set("__dirname", dir)
+	e.vm.Set("__filename", filename)
+
+	// 执行文件内容
+	defer func() {
+		// 恢复原来的 __dirname 和 __filename
+		if oldDirname != goja.Undefined() {
+			e.vm.Set("__dirname", oldDirname)
+		} else {
+			e.vm.Set("__dirname", goja.Undefined())
+		}
+		if oldFilename != goja.Undefined() {
+			e.vm.Set("__filename", oldFilename)
+		} else {
+			e.vm.Set("__filename", goja.Undefined())
+		}
+	}()
+
+	_, err = e.vm.RunString(string(content))
+	if err != nil {
+		panic(fmt.Sprintf("failed to execute file '%s': %v", path, err))
+	}
+
+	return goja.Undefined()
+}
+
 func (e *JSEngine) injectAllMethods() {
 	whiteList := e.config.WhiteList
 	blackList := e.config.BlackList
 	failFast := e.config.FailFast
 
-	modules := moduleRegistry.ListModules()
+	modules := e.moduleRegistry.ListModules()
 
 	for _, name := range modules {
-		module, ok := moduleRegistry.GetModule(name)
+		module, ok := e.moduleRegistry.GetModule(name)
 		if !ok {
 			continue
 		}
@@ -201,7 +244,7 @@ func (e *JSEngine) InjectModule(moduleName string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	module, ok := moduleRegistry.GetModule(moduleName)
+	module, ok := e.moduleRegistry.GetModule(moduleName)
 	if !ok {
 		panic(fmt.Sprintf("unknown module: %s", moduleName))
 	}
@@ -227,7 +270,16 @@ func (e *JSEngine) InjectModules(modules []string) {
 
 // GetAvailableModules 获取所有可用模块列表
 func (e *JSEngine) GetAvailableModules() []string {
-	return moduleRegistry.ListModules()
+	return e.moduleRegistry.ListModules()
+}
+
+// RegisterModule 注册一个或多个模块到当前引擎实例
+// 用户可以在自己的代码中调用此方法来注册需要的模块
+// 支持可变长参数，可以一次注册多个模块
+func (e *JSEngine) RegisterModule(modules ...model.Module) {
+	for _, module := range modules {
+		e.moduleRegistry.RegisterModule(module)
+	}
 }
 
 // InjectAllMethods 注入所有方法（公开方法，允许手动调用）
@@ -244,7 +296,57 @@ func (e *JSEngine) RegisterMethod(name, description string, goFunc interface{}, 
 // ExecuteString 执行 JavaScript 代码字符串
 // script: 要执行的 JavaScript 代码
 // dir: 可选参数，指定 __dirname（用于 require），如果为空则使用默认值 "scripts"
+// 支持脚本退出后的动作：
+//   - process.exit(0): 正常退出，执行配置的退出动作（重启/自定义/无动作）
+//   - process.exit(-1): 强制退出，不执行任何退出动作
+//   - process.exit(其他值): 正常退出，执行配置的退出动作
+//
+// 脚本异常退出时始终打印日志
 func (e *JSEngine) ExecuteString(script string, dir ...string) error {
+	e.currentScript = script
+	if len(dir) > 0 && dir[0] != "" {
+		e.currentDir = dir[0]
+	} else {
+		e.currentDir = "scripts"
+	}
+	e.skipExitAction = false
+
+	for {
+		err := e.executeStringOnce(script, dir...)
+
+		// 如果脚本异常退出，打印错误日志
+		if err != nil {
+			fmt.Printf("脚本异常退出: %v\n", err)
+			return err
+		}
+
+		// 如果跳过退出动作（process.exit(-1)），直接返回
+		if e.skipExitAction {
+			return nil
+		}
+
+		// 根据配置的退出动作执行相应操作
+		switch e.config.OnExit {
+		case ExitActionNone:
+			// 无动作，直接退出
+			return nil
+		case ExitActionRestart:
+			// 重启脚本
+			fmt.Println("脚本正常退出，正在重新启动...")
+			time.Sleep(1 * time.Second)
+			// 继续循环，重新执行脚本
+		case ExitActionCustom:
+			// 执行自定义退出动作
+			if e.config.CustomExitAction != nil {
+				e.config.CustomExitAction()
+			}
+			return nil
+		}
+	}
+}
+
+// executeStringOnce 执行一次 JavaScript 代码字符串
+func (e *JSEngine) executeStringOnce(script string, dir ...string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -253,11 +355,9 @@ func (e *JSEngine) ExecuteString(script string, dir ...string) error {
 	}
 
 	// 如果配置了文件系统且 __dirname 未设置，设置 __dirname
-	// 这样在使用 ExecuteString 时也能正常使用 require
 	if e.config.FileSystem != nil {
 		currentDir := e.vm.Get("__dirname")
 		if currentDir == goja.Undefined() || currentDir.String() == "" {
-			// 如果提供了 dir 参数，使用它；否则使用默认值
 			__dirname := "scripts"
 			if len(dir) > 0 && dir[0] != "" {
 				__dirname = dir[0]
@@ -266,42 +366,59 @@ func (e *JSEngine) ExecuteString(script string, dir ...string) error {
 		}
 	}
 
-	_, err := e.vm.RunString(script)
+	// 注册特殊的 process.exit 函数，用于控制退出动作
+	e.registerExitControl()
+
+	// 使用 IIFE 包装脚本，避免全局作用域污染
+	wrappedScript := "(function() {\n" + script + "\n})();"
+
+	_, err := e.vm.RunString(wrappedScript)
 	return err
 }
 
 func (e *JSEngine) ExecuteFile(path string) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	if e.vm == nil {
-		return fmt.Errorf("JavaScript engine not initialized")
-	}
-
-	// 如果配置了文件系统，从文件系统读取并自动设置 __dirname
-	if e.config.FileSystem != nil {
-		// 读取文件内容
-		content, err := fs.ReadFile(e.config.FileSystem, path)
-		if err != nil {
-			return fmt.Errorf("failed to read file '%s': %v", path, err)
-		}
-
-		// 从路径中提取目录和文件名
-		dir := filepath.Dir(path)
-		filename := filepath.Base(path)
-
-		// 设置 __dirname 和 __filename
-		e.vm.Set("__dirname", dir)
-		e.vm.Set("__filename", filename)
-
-		// 执行文件内容
-		_, err = e.vm.RunString(string(content))
-		return err
-	}
-
-	// 如果没有配置文件系统，使用原来的方式（通过 load 函数）
+	// 使用 load 函数来加载文件
 	_, err := e.vm.RunString("load('" + path + "')")
 	return err
+}
+
+// registerExitControl 注册特殊的 process.exit 函数，用于控制退出动作
+// process.exit(0) - 正常退出，执行配置的退出动作（重启/自定义/无动作）
+// process.exit(-1) - 强制退出，不执行任何退出动作
+// process.exit(其他值) - 正常退出，执行配置的退出动作
+func (e *JSEngine) registerExitControl() {
+	// 获取 process 对象
+	process := e.vm.Get("process")
+	if process == goja.Undefined() {
+		// 如果 process 对象不存在，创建一个
+		processObj := e.vm.NewObject()
+		e.vm.Set("process", processObj)
+		process = processObj
+	}
+
+	processObj, ok := process.(*goja.Object)
+	if !ok {
+		// 如果 process 不是对象，无法注册退出控制
+		return
+	}
+
+	// 保存原始的 exit 函数
+	originalExit := processObj.Get("exit")
+
+	// 注册新的 exit 函数
+	processObj.Set("exit", e.vm.ToValue(func(code int) {
+		// 如果退出码为 -1，跳过退出动作
+		if code == -1 {
+			e.skipExitAction = true
+		}
+
+		// 调用原始的 exit 函数
+		if originalExit != goja.Undefined() {
+			if exitFunc, ok := goja.AssertFunction(originalExit); ok {
+				_, _ = exitFunc(goja.Null(), e.vm.ToValue(code))
+			}
+		}
+	}))
 }
 
 func (e *JSEngine) Close() {

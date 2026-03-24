@@ -6,31 +6,13 @@ import (
 	"time"
 
 	"github.com/ZingYao/autogo_scriptengine/lua_engine/model"
-
 	lua "github.com/yuin/gopher-lua"
 )
 
 var (
-	engine         *LuaEngine
-	once           sync.Once
-	moduleRegistry *model.ModuleRegistry
+	engine *LuaEngine
+	once   sync.Once
 )
-
-func initModuleRegistry() {
-	if moduleRegistry == nil {
-		moduleRegistry = model.NewModuleRegistry()
-	}
-}
-
-// RegisterModule 注册一个或多个模块到引擎
-// 用户可以在自己的代码中调用此方法来注册需要的模块
-// 支持可变长参数，可以一次注册多个模块
-func RegisterModule(modules ...model.Module) {
-	initModuleRegistry()
-	for _, module := range modules {
-		moduleRegistry.RegisterModule(module)
-	}
-}
 
 // GetLuaEngine 获取默认引擎实例（使用默认配置，自动注入所有方法）
 func GetLuaEngine() *LuaEngine {
@@ -38,7 +20,7 @@ func GetLuaEngine() *LuaEngine {
 		engine = &LuaEngine{
 			config: DefaultConfig(),
 		}
-		initModuleRegistry()
+		engine.moduleRegistry = model.NewModuleRegistry()
 		engine.init()
 	})
 	return engine
@@ -60,7 +42,7 @@ func NewLuaEngine(config *EngineConfig) *LuaEngine {
 	e := &LuaEngine{
 		config: cfg,
 	}
-	initModuleRegistry()
+	e.moduleRegistry = model.NewModuleRegistry()
 	e.init()
 	return e
 }
@@ -256,10 +238,10 @@ func (e *LuaEngine) injectAllMethods() {
 	blackList := e.config.BlackList
 	failFast := e.config.FailFast
 
-	modules := moduleRegistry.ListModules()
+	modules := e.moduleRegistry.ListModules()
 
 	for _, name := range modules {
-		module, ok := moduleRegistry.GetModule(name)
+		module, ok := e.moduleRegistry.GetModule(name)
 		if !ok {
 			continue
 		}
@@ -321,7 +303,7 @@ func (e *LuaEngine) InjectModule(moduleName string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	module, ok := moduleRegistry.GetModule(moduleName)
+	module, ok := e.moduleRegistry.GetModule(moduleName)
 	if !ok {
 		panic(fmt.Sprintf("unknown module: %s", moduleName))
 	}
@@ -347,7 +329,16 @@ func (e *LuaEngine) InjectModules(modules []string) {
 
 // GetAvailableModules 获取所有可用模块列表
 func (e *LuaEngine) GetAvailableModules() []string {
-	return moduleRegistry.ListModules()
+	return e.moduleRegistry.ListModules()
+}
+
+// RegisterModule 注册一个或多个模块到当前引擎实例
+// 用户可以在自己的代码中调用此方法来注册需要的模块
+// 支持可变长参数，可以一次注册多个模块
+func (e *LuaEngine) RegisterModule(modules ...model.Module) {
+	for _, module := range modules {
+		e.moduleRegistry.RegisterModule(module)
+	}
 }
 
 // InjectAllMethods 注入所有方法（公开方法，允许手动调用）
@@ -361,10 +352,55 @@ func (e *LuaEngine) RegisterMethod(name, description string, goFunc interface{},
 	RegisterMethod(name, description, goFunc, overridable)
 }
 
-// ExecuteString 执行 Lua 代码字符串
+// ExecuteString 执行 Lua 代码字符串（实例方法）
 // script: 要执行的 Lua 代码
 // searchPaths: 可选参数，添加模块搜索路径（用于 require）
+// 支持脚本退出后的动作：
+//   - os.exit(0): 正常退出，执行配置的退出动作（重启/自定义/无动作）
+//   - os.exit(-1): 强制退出，不执行任何退出动作
+//   - os.exit(其他值): 正常退出，执行配置的退出动作
+// 脚本异常退出时始终打印日志
 func (e *LuaEngine) ExecuteString(script string, searchPaths ...string) error {
+	e.currentScript = script
+	e.currentSearchPaths = searchPaths
+	e.skipExitAction = false
+	
+	for {
+		err := e.executeStringOnce(script, searchPaths...)
+		
+		// 如果脚本异常退出，打印错误日志
+		if err != nil {
+			fmt.Printf("脚本异常退出: %v\n", err)
+			return err
+		}
+		
+		// 如果跳过退出动作（os.exit(-1)），直接返回
+		if e.skipExitAction {
+			return nil
+		}
+		
+		// 根据配置的退出动作执行相应操作
+		switch e.config.OnExit {
+		case ExitActionNone:
+			// 无动作，直接退出
+			return nil
+		case ExitActionRestart:
+			// 重启脚本
+			fmt.Println("脚本正常退出，正在重新启动...")
+			time.Sleep(1 * time.Second)
+			// 继续循环，重新执行脚本
+		case ExitActionCustom:
+			// 执行自定义退出动作
+			if e.config.CustomExitAction != nil {
+				e.config.CustomExitAction()
+			}
+			return nil
+		}
+	}
+}
+
+// executeStringOnce 执行一次 Lua 代码字符串
+func (e *LuaEngine) executeStringOnce(script string, searchPaths ...string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -376,6 +412,9 @@ func (e *LuaEngine) ExecuteString(script string, searchPaths ...string) error {
 	if len(searchPaths) > 0 {
 		e.addSearchPaths(searchPaths...)
 	}
+
+	// 注册特殊的 os.exit 函数，用于控制退出动作
+	e.registerExitControl()
 
 	return e.state.DoString(script)
 }
@@ -399,7 +438,54 @@ func (e *LuaEngine) addSearchPaths(paths ...string) {
 	}
 }
 
+// ExecuteFile 执行 Lua 文件
+// path: 要执行的 Lua 文件路径
+// 支持脚本退出后的动作：
+//   - os.exit(0): 正常退出，执行配置的退出动作（重启/自定义/无动作）
+//   - os.exit(-1): 强制退出，不执行任何退出动作
+//   - os.exit(其他值): 正常退出，执行配置的退出动作
+// 脚本异常退出时始终打印日志
 func (e *LuaEngine) ExecuteFile(path string) error {
+	e.currentScript = path
+	e.currentSearchPaths = []string{}
+	e.skipExitAction = false
+	
+	for {
+		err := e.executeFileOnce(path)
+		
+		// 如果脚本异常退出，打印错误日志
+		if err != nil {
+			fmt.Printf("脚本异常退出: %v\n", err)
+			return err
+		}
+		
+		// 如果跳过退出动作（os.exit(-1)），直接返回
+		if e.skipExitAction {
+			return nil
+		}
+		
+		// 根据配置的退出动作执行相应操作
+		switch e.config.OnExit {
+		case ExitActionNone:
+			// 无动作，直接退出
+			return nil
+		case ExitActionRestart:
+			// 重启脚本
+			fmt.Println("脚本正常退出，正在重新启动...")
+			time.Sleep(1 * time.Second)
+			// 继续循环，重新执行脚本
+		case ExitActionCustom:
+			// 执行自定义退出动作
+			if e.config.CustomExitAction != nil {
+				e.config.CustomExitAction()
+			}
+			return nil
+		}
+	}
+}
+
+// executeFileOnce 执行一次 Lua 文件
+func (e *LuaEngine) executeFileOnce(path string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -429,12 +515,18 @@ func (e *LuaEngine) ExecuteFile(path string) error {
 		// 自动检测文件所在目录并添加到搜索路径
 		e.addSearchPathsFromPath(path)
 
+		// 注册特殊的 os.exit 函数，用于控制自动重启
+		e.registerExitControl()
+
 		// 执行文件内容
 		return e.state.DoString(string(data))
 	}
 
 	// 自动检测文件所在目录并添加到搜索路径
 	e.addSearchPathsFromPath(path)
+
+	// 注册特殊的 os.exit 函数，用于控制自动重启
+	e.registerExitControl()
 
 	return e.state.DoFile(path)
 }
@@ -477,6 +569,75 @@ func (e *LuaEngine) Close() {
 		e.state.Close()
 		e.state = nil
 	}
+}
+
+// registerExitControl 注册特殊的 os.exit 函数，用于控制退出动作
+// os.exit(0) - 正常退出，执行配置的退出动作（重启/自定义/无动作）
+// os.exit(-1) - 强制退出，不执行任何退出动作
+// os.exit(其他值) - 正常退出，执行配置的退出动作
+func (e *LuaEngine) registerExitControl() {
+	// 获取 os 表
+	osTable := e.state.GetGlobal("os").(*lua.LTable)
+	
+	// 保存原始的 os.exit 函数
+	originalExit := osTable.RawGetString("exit")
+	
+	// 注册新的 os.exit 函数
+	osTable.RawSetString("exit", e.state.NewFunction(func(L *lua.LState) int {
+		code := L.CheckInt(1)
+		
+		// 如果退出码为 -1，跳过退出动作
+		if code == -1 {
+			e.skipExitAction = true
+		}
+		
+		// 调用原始的 os.exit 函数
+		if originalExit.Type() == lua.LTFunction {
+			L.Push(originalExit)
+			L.Push(lua.LNumber(code))
+			L.Call(1, 0)
+		}
+		
+		return 0
+	}))
+}
+
+// Restart 重启 Lua 引擎
+// 关闭当前状态并重新初始化，保留模块缓存
+func (e *LuaEngine) Restart() error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	// 保存模块缓存
+	oldModuleCache := e.moduleCache
+
+	// 关闭当前状态
+	if e.state != nil {
+		e.state.Close()
+	}
+
+	// 重新初始化状态
+	e.state = lua.NewState(lua.Options{
+		SkipOpenLibs:        false,
+		IncludeGoStackTrace: true,
+	})
+
+	// 恢复模块缓存
+	e.moduleCache = oldModuleCache
+
+	// 重新设置模块搜索路径
+	e.setupPackagePath()
+
+	// 重新注册核心函数
+	e.registerCoreFunctions()
+	if e.config.AutoInjectMethods {
+		e.injectAllMethods()
+	}
+
+	// 重新注册自定义 require 函数
+	e.registerCustomRequire()
+
+	return nil
 }
 
 func (e *LuaEngine) GetRegistry() *MethodRegistry {

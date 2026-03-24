@@ -2,28 +2,29 @@ package all_models
 
 import (
 	"github.com/ZingYao/autogo_scriptengine/js_engine/model"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/app"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/console"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/device"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/dotocr"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/files"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/http"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/hud"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/images"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/ime"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/imgui"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/media"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/motion"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/opencv"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/plugin"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/ppocr"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/rhino"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/storages"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/system"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/uiacc"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/utils"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/vdisplay"
-	"github.com/ZingYao/autogo_scriptengine/js_engine/model/yolo"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/app"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/console"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/coroutine"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/device"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/dotocr"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/files"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/http"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/hud"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/images"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/ime"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/imgui"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/media"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/motion"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/opencv"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/plugin"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/ppocr"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/rhino"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/storages"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/system"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/uiacc"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/utils"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/vdisplay"
+	"github.com/ZingYao/autogo_scriptengine/js_engine/model/autogo/yolo"
 )
 
 // AllModules 包含所有可用模块的数组
@@ -31,6 +32,7 @@ var AllModules = []model.Module{
 	&app.AppModule{},
 	&device.DeviceModule{},
 	&console.ConsoleModule{},
+	&coroutine.CoroutineModule{},
 	&hud.HUDModule{},
 	&vdisplay.VdisplayModule{},
 	&dotocr.DotocrModule{},

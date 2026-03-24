@@ -22,4 +22,7 @@ type Engine interface {
 
 	// RegisterMethod 注册方法
 	RegisterMethod(name, description string, fn interface{}, overridable bool)
+
+	// Restart 重启引擎
+	Restart() error
 }
