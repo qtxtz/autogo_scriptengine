@@ -26,38 +26,22 @@ lrappsoft/
 
 ## 4. 使用方法
 
-### 4.1 导入模块
+lrappsoft 风格包的模块通过 Go 注入到 Lua 引擎中，无需在 Lua 脚本中使用 require 导入。
 
-在 Lua 脚本中，可以使用 `require` 函数导入 lrappsoft 风格包的模块：
+### 4.1 直接调用模块
 
-```lua
--- 导入 device 模块
-local device = require("lrappsoft.device")
-
--- 导入 time 模块
-local time = require("lrappsoft.time")
-
--- 导入 console 模块
-local console = require("lrappsoft.console")
-```
-
-### 4.2 基本使用示例
+由于 lrappsoft 风格包的模块已经通过 Go 注入到 Lua 引擎中，您可以直接在 Lua 脚本中调用这些模块，无需使用 require 导入。
 
 ```lua
--- 导入模块
-local device = require("lrappsoft.device")
-local time = require("lrappsoft.time")
-local console = require("lrappsoft.console")
-
--- 点击屏幕
+-- 直接调用模块
 device.click(500, 500)
-
--- 输出日志
-console.log("点击成功")
-
--- 等待 2 秒
 time.sleep(2000)
+console.log("点击成功")
 ```
+
+### 4.2 模块说明
+
+lrappsoft 风格包的模块路径是 `lrappsoft.模块名`，但由于模块已经通过 Go 注入，您可以直接调用模块方法。
 
 ## 5. 如何迁移懒人的 Lua 脚本
 
@@ -72,7 +56,6 @@ time.sleep(2000)
 ### 5.2 迁移示例
 
 **原懒人脚本**：
-
 ```lua
 -- 导入模块
 local device = require("device")
@@ -81,37 +64,19 @@ local console = require("console")
 
 -- 点击屏幕
 device.click(500, 500)
-
 -- 输出日志
 console.log("点击成功")
-
 -- 等待 2 秒
 time.sleep(2000)
 ```
 
 **迁移后脚本**：
-
 ```lua
--- 导入模块
-local device = require("lrappsoft.device")
-local time = require("lrappsoft.time")
-local console = require("lrappsoft.console")
-
--- 点击屏幕
+-- 直接调用模块（无需 require）
 device.click(500, 500)
-
--- 输出日志
-console.log("点击成功")
-
--- 等待 2 秒
 time.sleep(2000)
+console.log("点击成功")
 ```
-
-### 5.3 注意事项
-
-1. 部分懒人脚本的高级功能可能需要额外调整
-2. 对于不支持的方法，需要使用 AutoGo 原生 API 进行替代
-3. 迁移过程中建议逐步测试，确保每个功能正常
 
 ## 6. 模块说明
 
