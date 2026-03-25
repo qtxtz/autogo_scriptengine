@@ -65,9 +65,6 @@ func (e *JSEngine) init() {
 	e.vm = goja.New()
 
 	e.registerCoreFunctions()
-	if e.config.AutoInjectMethods {
-		e.injectAllMethods()
-	}
 }
 
 func (e *JSEngine) GetVM() *goja.Runtime {

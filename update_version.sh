@@ -91,11 +91,11 @@ git commit -m "更新版本为 ${NEW_VERSION}
 
 - 更新所有 go.mod 文件
 - 更新所有 README.md 文件
-- Tag: $NEW_TAG"
+- Tag: $NEW_VERSION"
 
 # 推送 tag
 echo "推送 tag ${NEW_TAG}..."
 echo "git push origin ${NEW_VERSION}"
 git push origin "${NEW_VERSION}"
 
-echo "完成！版本已从 $CURRENT_TAG 更新为 $NEW_TAG"
+echo "完成！版本已从 $CURRENT_TAG 更新为 $NEW_VERSION"

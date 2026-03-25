@@ -43,10 +43,9 @@ type JSEngine struct {
 // DefaultConfig 返回默认配置
 func DefaultConfig() EngineConfig {
 	return EngineConfig{
-		AutoInjectMethods: true,
-		WhiteList:         []string{}, // 默认为空，加载所有模块
-		BlackList:         []string{}, // 默认为空，不跳过任何模块
-		FailFast:          false,      // 默认为 false，模块加载失败时跳过继续
+		WhiteList: []string{}, // 默认为空，加载所有模块
+		BlackList: []string{}, // 默认为空，不跳过任何模块
+		FailFast:  false,      // 默认为 false，模块加载失败时跳过继续
 	}
 }
 
