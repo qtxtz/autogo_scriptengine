@@ -212,6 +212,7 @@ func (e *JSEngine) GetAvailableModules() []string {
 func (e *JSEngine) RegisterModule(modules ...model.Module) {
 	for _, module := range modules {
 		e.moduleRegistry.RegisterModule(module)
+		module.Register(e)
 	}
 }
 
