@@ -53,47 +53,46 @@ echo "检测到的包名：$PACKAGE_NAME"
 if [[ "$CURRENT_TAG" == *"$PACKAGE_NAME"* ]]; then
     echo "当前 tag '$CURRENT_TAG' 已包含包名 '$PACKAGE_NAME'，无需替换"
 else
-    # 替换 tag 中的包名
-    NEW_TAG="${NEW_VERSION} (${PACKAGE_NAME})"
-    echo "新的 tag 将是：$NEW_TAG"
-    
     # 删除旧的 tag
     git tag -d "$CURRENT_TAG" 2>/dev/null || true
     
-    # 创建新的 tag
+    # 创建新的 tag（只使用版本号）
+    NEW_TAG="${NEW_VERSION}"
+    echo "新的 tag 将是：$NEW_TAG"
     git tag "$NEW_TAG"
 fi
 
 # 更新 examples 目录下的 go.mod 文件
 echo "更新 examples 目录下的 go.mod 文件..."
-find examples -name "go.mod" -type f -exec sed -i '' "s/@v[0-9]\.[0-9]\.[0-9]\+\(\.[0-9]\+\)*/@${NEW_VERSION}/g" {} \;
+find examples -name "go.mod" -type f -exec sed -i '' "/github.com\/ZingYao\/autogo_scriptengine/ s/ v[0-9]\.[0-9]\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)*/ ${NEW_VERSION}/g" {} \;
 
 # 更新项目根目录的 README.md 文件（不是 go.mod）
 echo "更新项目根目录的 README.md 文件..."
 if [ -f "README.md" ]; then
-    sed -i '' "s/@v[0-9]\.[0-9]\.[0-9]\+\(\.[0-9]\+\)*/@${NEW_VERSION}/g" README.md
+    sed -i '' "/github.com\/ZingYao\/autogo_scriptengine/ s/@v[0-9]\.[0-9]\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)*/@${NEW_VERSION}/g" README.md
 fi
 
 # 更新 docs/README.md 文件
 echo "更新 docs/README.md 文件..."
-sed -i '' "s/@v[0-9]\.[0-9]\.[0-9]\+\(\.[0-9]\+\)*/@${NEW_VERSION}/g" docs/README.md
+sed -i '' "/github.com\/ZingYao\/autogo_scriptengine/ s/@v[0-9]\.[0-9]\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)*/@${NEW_VERSION}/g" docs/README.md
 
 # 更新 docs/js_engine/README.md 文件
 echo "更新 docs/js_engine/README.md 文件..."
 if [ -f "docs/js_engine/README.md" ]; then
-    sed -i '' "s/@v[0-9]\.[0-9]\.[0-9]\+\(\.[0-9]\+\)*/@${NEW_VERSION}/g" docs/js_engine/README.md
+    sed -i '' "/github.com\/ZingYao\/autogo_scriptengine/ s/@v[0-9]\.[0-9]\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)*/@${NEW_VERSION}/g" docs/js_engine/README.md
 fi
 
 # 更新 docs/lua_engine/README.md 文件
 echo "更新 docs/lua_engine/README.md 文件..."
 if [ -f "docs/lua_engine/README.md" ]; then
-    sed -i '' "s/@v[0-9]\.[0-9]\.[0-9]\+\(\.[0-9]\+\)*/@${NEW_VERSION}/g" docs/lua_engine/README.md
+    sed -i '' "/github.com\/ZingYao\/autogo_scriptengine/ s/@v[0-9]\.[0-9]\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)*/@${NEW_VERSION}/g" docs/lua_engine/README.md
 fi
 
 # 提交更改
 echo "提交更改..."
 git add -A
 git commit -m "更新版本为 ${NEW_VERSION}
+git push
 
 - 更新所有 go.mod 文件
 - 更新所有 README.md 文件

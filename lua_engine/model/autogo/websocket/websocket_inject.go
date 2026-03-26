@@ -119,6 +119,113 @@ func (m *WebSocketModule) Register(engine model.Engine) error {
 		return 1
 	}))
 
+	wsObj.RawSetString("connectObject", state.NewFunction(func(L *lua.LState) int {
+		urlStr := L.CheckString(1)
+		onOpened := L.CheckFunction(2)
+		onClosed := L.CheckFunction(3)
+		onError := L.CheckFunction(4)
+		onRecv := L.CheckFunction(5)
+
+		conn, _, err := websocket.DefaultDialer.Dial(urlStr, nil)
+		if err != nil {
+			if onError != nil {
+				L.Push(onError)
+				L.Push(lua.LNumber(0))
+				L.Push(lua.LString(err.Error()))
+				L.Call(2, 0)
+			}
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		m.mu.Lock()
+		handle := m.nextHandle
+		m.nextHandle++
+		m.connections[handle] = conn
+		m.mu.Unlock()
+
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("panic in websocket read loop: %v\n", r)
+				}
+			}()
+
+			for {
+				_, message, err := conn.ReadMessage()
+				if err != nil {
+					if onError != nil {
+						thread, _ := L.NewThread()
+						thread.Push(onError)
+						thread.Push(lua.LNumber(handle))
+						thread.Push(lua.LString(err.Error()))
+						if err := thread.PCall(2, 0, nil); err != nil {
+							fmt.Printf("Error calling onError callback: %v\n", err)
+						}
+					}
+					if onClosed != nil {
+						thread, _ := L.NewThread()
+						thread.Push(onClosed)
+						thread.Push(lua.LNumber(handle))
+						if err := thread.PCall(1, 0, nil); err != nil {
+							fmt.Printf("Error calling onClosed callback: %v\n", err)
+						}
+					}
+					break
+				}
+
+				if onRecv != nil {
+					thread, _ := L.NewThread()
+					thread.Push(onRecv)
+					thread.Push(lua.LNumber(handle))
+					thread.Push(lua.LString(string(message)))
+					if err := thread.PCall(2, 0, nil); err != nil {
+						fmt.Printf("Error calling onRecv callback: %v\n", err)
+					}
+				}
+			}
+		}()
+
+		wsConnObj := L.NewTable()
+
+		wsConnObj.RawSetString("send", state.NewFunction(func(L *lua.LState) int {
+			text := L.CheckString(1)
+
+			err := conn.WriteMessage(websocket.TextMessage, []byte(text))
+			if err != nil {
+				L.Push(lua.LBool(false))
+				return 1
+			}
+
+			L.Push(lua.LBool(true))
+			return 1
+		}))
+
+		wsConnObj.RawSetString("close", state.NewFunction(func(L *lua.LState) int {
+			m.mu.Lock()
+			defer m.mu.Unlock()
+
+			if conn, ok := m.connections[handle]; ok {
+				conn.Close()
+				delete(m.connections, handle)
+			}
+			return 0
+		}))
+
+		wsConnObj.RawSetString("handle", lua.LNumber(handle))
+
+		if onOpened != nil {
+			L.Push(onOpened)
+			L.Push(wsConnObj)
+			if err := L.PCall(1, 0, nil); err != nil {
+				fmt.Printf("Error calling onOpened callback: %v\n", err)
+			}
+		}
+
+		L.Push(wsConnObj)
+		return 1
+	}))
+
 	wsObj.RawSetString("close", state.NewFunction(func(L *lua.LState) int {
 		handle := L.CheckInt(1)
 		m.mu.Lock()
@@ -230,9 +337,4 @@ func (m *WebSocketModule) Register(engine model.Engine) error {
 	}, true)
 
 	return nil
-}
-
-// GetModule 获取模块实例
-func GetModule() model.Module {
-	return New()
 }

@@ -103,6 +103,94 @@ func (m *WebSocketModule) Register(engine model.Engine) error {
 		return vm.ToValue(handle)
 	})
 
+	wsObj.Set("connectObject", func(call goja.FunctionCall) goja.Value {
+		url := call.Argument(0).String()
+		onOpened := call.Argument(1)
+		onClosed := call.Argument(2)
+		onError := call.Argument(3)
+		onRecv := call.Argument(4)
+
+		conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+		if err != nil {
+			if onError != nil && !goja.IsUndefined(onError) {
+				if fn, ok := goja.AssertFunction(onError); ok {
+					fn(nil, vm.ToValue(0), vm.ToValue(err.Error()))
+				}
+			}
+			return goja.Null()
+		}
+
+		m.mu.Lock()
+		handle := m.nextHandle
+		m.nextHandle++
+		m.connections[handle] = conn
+		m.mu.Unlock()
+
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("panic in websocket read loop: %v\n", r)
+				}
+			}()
+
+			for {
+				_, message, err := conn.ReadMessage()
+				if err != nil {
+					if onError != nil && !goja.IsUndefined(onError) {
+						if fn, ok := goja.AssertFunction(onError); ok {
+							fn(nil, vm.ToValue(handle), vm.ToValue(err.Error()))
+						}
+					}
+					if onClosed != nil && !goja.IsUndefined(onClosed) {
+						if fn, ok := goja.AssertFunction(onClosed); ok {
+							fn(nil, vm.ToValue(handle))
+						}
+					}
+					break
+				}
+
+				if onRecv != nil && !goja.IsUndefined(onRecv) {
+					if fn, ok := goja.AssertFunction(onRecv); ok {
+						fn(nil, vm.ToValue(handle), vm.ToValue(string(message)))
+					}
+				}
+			}
+		}()
+
+		wsConnObj := vm.NewObject()
+		wsConnObj.Set("send", func(call goja.FunctionCall) goja.Value {
+			text := call.Argument(0).String()
+
+			err := conn.WriteMessage(websocket.TextMessage, []byte(text))
+			if err != nil {
+				return vm.ToValue(false)
+			}
+
+			return vm.ToValue(true)
+		})
+
+		wsConnObj.Set("close", func(call goja.FunctionCall) goja.Value {
+			m.mu.Lock()
+			defer m.mu.Unlock()
+
+			if conn, ok := m.connections[handle]; ok {
+				conn.Close()
+				delete(m.connections, handle)
+			}
+			return goja.Undefined()
+		})
+
+		wsConnObj.Set("handle", vm.ToValue(handle))
+
+		if onOpened != nil && !goja.IsUndefined(onOpened) {
+			if fn, ok := goja.AssertFunction(onOpened); ok {
+				fn(nil, wsConnObj)
+			}
+		}
+
+		return wsConnObj
+	})
+
 	wsObj.Set("close", func(call goja.FunctionCall) goja.Value {
 		handle := int(call.Argument(0).ToInteger())
 		m.mu.Lock()
@@ -199,9 +287,4 @@ func (m *WebSocketModule) Register(engine model.Engine) error {
 	}, true)
 
 	return nil
-}
-
-// GetModule 获取模块实例
-func GetModule() model.Module {
-	return New()
 }
