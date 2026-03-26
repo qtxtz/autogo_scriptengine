@@ -54,69 +54,6 @@ func (m *WebSocketModule) Register(engine model.Engine) error {
 					fn(nil, vm.ToValue(0), vm.ToValue(err.Error()))
 				}
 			}
-			return vm.ToValue(0)
-		}
-
-		m.mu.Lock()
-		handle := m.nextHandle
-		m.nextHandle++
-		m.connections[handle] = conn
-		m.mu.Unlock()
-
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					fmt.Printf("panic in websocket read loop: %v\n", r)
-				}
-			}()
-
-			for {
-				_, message, err := conn.ReadMessage()
-				if err != nil {
-					if onError != nil && !goja.IsUndefined(onError) {
-						if fn, ok := goja.AssertFunction(onError); ok {
-							fn(nil, vm.ToValue(handle), vm.ToValue(err.Error()))
-						}
-					}
-					if onClosed != nil && !goja.IsUndefined(onClosed) {
-						if fn, ok := goja.AssertFunction(onClosed); ok {
-							fn(nil, vm.ToValue(handle))
-						}
-					}
-					break
-				}
-
-				if onRecv != nil && !goja.IsUndefined(onRecv) {
-					if fn, ok := goja.AssertFunction(onRecv); ok {
-						fn(nil, vm.ToValue(handle), vm.ToValue(string(message)))
-					}
-				}
-			}
-		}()
-
-		if onOpened != nil && !goja.IsUndefined(onOpened) {
-			if fn, ok := goja.AssertFunction(onOpened); ok {
-				fn(nil, vm.ToValue(handle))
-			}
-		}
-
-		return vm.ToValue(handle)
-	})
-
-	wsObj.Set("connectObject", func(call goja.FunctionCall) goja.Value {
-		url := call.Argument(0).String()
-		onOpened := call.Argument(1)
-		onClosed := call.Argument(2)
-		onError := call.Argument(3)
-		onRecv := call.Argument(4)
-
-		conn, _, err := websocket.DefaultDialer.Dial(url, nil)
-		if err != nil {
-			if onError != nil && !goja.IsUndefined(onError) {
-				if fn, ok := goja.AssertFunction(onError); ok {
-					fn(nil, vm.ToValue(0), vm.ToValue(err.Error()))
-				}
-			}
 			return goja.Null()
 		}
 
