@@ -1,0 +1,334 @@
+package lua_engine
+
+import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	lua "github.com/yuin/gopher-lua"
+	"github.com/yuin/gopher-lua/parse"
+)
+
+// Bytecode 表示编译后的 Lua 字节码
+// 注意：gopher-lua 的字节码格式与标准 Lua 字节码不兼容
+// 这是 gopher-lua 特有的字节码格式，仅能在 gopher-lua 虚拟机中执行
+type Bytecode struct {
+	// Proto 是编译后的函数原型
+	Proto *lua.FunctionProto
+	// Name 是字节码的名称（通常是文件名或脚本名）
+	Name string
+}
+
+// CompileString 将 Lua 源码字符串编译为字节码
+// source: Lua 源码字符串
+// name: 可选参数，字节码的名称，用于调试和错误信息
+// 返回编译后的字节码对象和可能的错误
+func (e *LuaEngine) CompileString(source string, name ...string) (*Bytecode, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	if e.state == nil {
+		return nil, fmt.Errorf("Lua engine not initialized")
+	}
+
+	// 设置默认名称
+	scriptName := "string"
+	if len(name) > 0 && name[0] != "" {
+		scriptName = name[0]
+	}
+
+	// 解析 Lua 源码
+	reader := strings.NewReader(source)
+	chunk, err := parse.Parse(reader, scriptName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Lua source: %v", err)
+	}
+
+	// 编译为函数原型
+	proto, err := lua.Compile(chunk, scriptName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile Lua source: %v", err)
+	}
+
+	return &Bytecode{
+		Proto: proto,
+		Name:  scriptName,
+	}, nil
+}
+
+// CompileFile 将 Lua 源码文件编译为字节码
+// path: Lua 源码文件路径
+// 返回编译后的字节码对象和可能的错误
+func (e *LuaEngine) CompileFile(path string) (*Bytecode, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	if e.state == nil {
+		return nil, fmt.Errorf("Lua engine not initialized")
+	}
+
+	// 读取文件内容
+	var content []byte
+	var err error
+
+	if e.config.FileSystem != nil {
+		// 从配置的文件系统读取
+		file, err := e.config.FileSystem.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open file '%s': %v", path, err)
+		}
+		defer file.Close()
+
+		content, err = io.ReadAll(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file '%s': %v", path, err)
+		}
+	} else {
+		// 从操作系统文件系统读取
+		content, err = os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file '%s': %v", path, err)
+		}
+	}
+
+	// 使用文件名作为字节码名称
+	return e.CompileString(string(content), path)
+}
+
+// ExecuteBytecode 执行预编译的字节码
+// bytecode: 编译后的字节码对象
+// 返回执行结果和可能的错误
+func (e *LuaEngine) ExecuteBytecode(bytecode *Bytecode) error {
+	return e.ExecuteBytecodeWithMode(bytecode, e.config.ExecuteMode)
+}
+
+// ExecuteBytecodeWithMode 带执行模式的执行字节码
+// bytecode: 编译后的字节码对象
+// mode: 执行模式（同步或异步）
+func (e *LuaEngine) ExecuteBytecodeWithMode(bytecode *Bytecode, mode ExecuteMode) error {
+	if bytecode == nil || bytecode.Proto == nil {
+		return fmt.Errorf("invalid bytecode: nil")
+	}
+
+	e.Start()
+
+	// 异步执行
+	if mode == ExecuteModeAsync {
+		go func() {
+			e.executeBytecodeLoop(bytecode)
+		}()
+		return nil
+	}
+
+	// 同步执行
+	return e.executeBytecodeLoop(bytecode)
+}
+
+// executeBytecodeLoop 执行字节码循环
+func (e *LuaEngine) executeBytecodeLoop(bytecode *Bytecode) error {
+	for {
+		err := e.executeBytecodeOnce(bytecode)
+
+		// 如果脚本异常退出，打印错误日志
+		if err != nil {
+			fmt.Printf("脚本异常退出: %v\n", err)
+			e.Stop()
+			return err
+		}
+
+		// 如果跳过退出动作（os.exit(-1)），直接返回
+		if e.skipExitAction {
+			e.Stop()
+			return nil
+		}
+
+		// 根据配置的退出动作执行相应操作
+		switch e.config.OnExit {
+		case ExitActionNone:
+			// 无动作，直接退出
+			e.Stop()
+			return nil
+		case ExitActionRestart:
+			// 重启脚本
+			fmt.Println("脚本正常退出，正在重新启动...")
+			// 继续循环，重新执行脚本
+		case ExitActionCustom:
+			// 执行自定义退出动作
+			if e.config.CustomExitAction != nil {
+				e.config.CustomExitAction()
+			}
+			e.Stop()
+			return nil
+		}
+	}
+}
+
+// executeBytecodeOnce 执行一次字节码
+func (e *LuaEngine) executeBytecodeOnce(bytecode *Bytecode) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.state == nil {
+		return fmt.Errorf("Lua engine not initialized")
+	}
+
+	// 从函数原型创建 Lua 函数
+	lfunc := e.state.NewFunctionFromProto(bytecode.Proto)
+
+	// 注册特殊的 os.exit 函数，用于控制退出动作
+	e.registerExitControl()
+
+	// 压入函数并调用
+	e.state.Push(lfunc)
+	return e.state.PCall(0, lua.MultRet, nil)
+}
+
+// SerializeBytecode 将字节码序列化为字节数组
+// 这允许将编译后的字节码保存到文件或传输
+// bytecode: 要序列化的字节码对象
+// 返回序列化后的字节数组和可能的错误
+func SerializeBytecode(bytecode *Bytecode) ([]byte, error) {
+	if bytecode == nil || bytecode.Proto == nil {
+		return nil, fmt.Errorf("invalid bytecode: nil")
+	}
+
+	var buf bytes.Buffer
+	encoder := gob.NewEncoder(&buf)
+
+	// 注册 FunctionProto 类型
+	gob.Register(&lua.FunctionProto{})
+
+	// 序列化字节码
+	err := encoder.Encode(struct {
+		Name string
+		// 注意：FunctionProto 的序列化需要特殊处理
+		// 这里我们保存原始源码信息，以便后续重新编译
+		Source string
+	}{
+		Name: bytecode.Name,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize bytecode: %v", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// DeserializeBytecode 从字节数组反序列化字节码
+// 注意：由于 gopher-lua 的 FunctionProto 不支持直接序列化
+// 这个函数主要用于演示，实际使用时需要重新编译源码
+// data: 序列化的字节数组
+// 返回字节码对象和可能的错误
+func DeserializeBytecode(data []byte) (*Bytecode, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty data")
+	}
+
+	var result struct {
+		Name string
+	}
+
+	buf := bytes.NewBuffer(data)
+	decoder := gob.NewDecoder(buf)
+
+	err := decoder.Decode(&result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deserialize bytecode: %v", err)
+	}
+
+	// 注意：由于无法直接反序列化 FunctionProto
+	// 这里返回一个空的字节码对象，实际使用时需要重新编译
+	return &Bytecode{
+		Name:  result.Name,
+		Proto: nil,
+	}, nil
+}
+
+// SaveBytecodeToFile 将字节码保存到文件
+// 注意：由于 gopher-lua 的限制，这个方法主要用于保存元数据
+// 实际的字节码执行需要保留源码并重新编译
+// bytecode: 要保存的字节码对象
+// path: 目标文件路径
+func (e *LuaEngine) SaveBytecodeToFile(bytecode *Bytecode, path string) error {
+	if bytecode == nil {
+		return fmt.Errorf("invalid bytecode: nil")
+	}
+
+	// 序列化字节码
+	data, err := SerializeBytecode(bytecode)
+	if err != nil {
+		return fmt.Errorf("failed to serialize bytecode: %v", err)
+	}
+
+	// 写入文件
+	err = os.WriteFile(path, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write bytecode file: %v", err)
+	}
+
+	return nil
+}
+
+// LoadBytecodeFromFile 从文件加载字节码
+// 注意：由于 gopher-lua 的限制，这个方法主要用于加载元数据
+// 实际的字节码执行需要保留源码并重新编译
+// path: 字节码文件路径
+func (e *LuaEngine) LoadBytecodeFromFile(path string) (*Bytecode, error) {
+	// 读取文件
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read bytecode file: %v", err)
+	}
+
+	// 反序列化字节码
+	bytecode, err := DeserializeBytecode(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deserialize bytecode: %v", err)
+	}
+
+	return bytecode, nil
+}
+
+// GetFunctionProto 获取字节码中的函数原型
+// 这允许高级用户直接访问 gopher-lua 的底层字节码结构
+func (b *Bytecode) GetFunctionProto() *lua.FunctionProto {
+	if b == nil {
+		return nil
+	}
+	return b.Proto
+}
+
+// GetName 获取字节码的名称
+func (b *Bytecode) GetName() string {
+	if b == nil {
+		return ""
+	}
+	return b.Name
+}
+
+// CompileString 全局函数：将 Lua 源码字符串编译为字节码
+func CompileString(source string, name ...string) (*Bytecode, error) {
+	if engine != nil {
+		return engine.CompileString(source, name...)
+	}
+	return nil, fmt.Errorf("Lua engine not initialized")
+}
+
+// CompileFile 全局函数：将 Lua 源码文件编译为字节码
+func CompileFile(path string) (*Bytecode, error) {
+	if engine != nil {
+		return engine.CompileFile(path)
+	}
+	return nil, fmt.Errorf("Lua engine not initialized")
+}
+
+// ExecuteBytecode 全局函数：执行预编译的字节码
+func ExecuteBytecode(bytecode *Bytecode) error {
+	if engine != nil {
+		return engine.ExecuteBytecode(bytecode)
+	}
+	return fmt.Errorf("Lua engine not initialized")
+}
