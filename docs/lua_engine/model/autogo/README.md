@@ -1,8 +1,8 @@
-# Lua 引擎 autogo 风格包文档
+# Lua 引擎 Android autogo 风格包文档
 
 ## 1. 风格包简介
 
-autogo 风格包是 Lua 引擎的一种风格实现，基于 AutoGo 原生 API 开发。它提供了一套简洁、高效的 API 接口，方便开发者快速编写脚本。
+Android autogo 风格包是 Lua 引擎的一种 Android 风格实现，基于 AutoGo Android 原生 API 开发。它提供了一套简洁、高效的 API 接口，方便开发者快速编写 Android 自动化脚本。
 
 ## 2. 实现基础
 
@@ -15,7 +15,7 @@ autogo 风格包基于 AutoGo 原生 API 实现，主要特点包括：
 
 ## 3. 目录结构
 
-autogo 风格包的目录结构如下：
+Android autogo 风格包的目录结构如下：
 
 ```
 autogo/
