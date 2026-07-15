@@ -7,7 +7,7 @@
 - `autogo-scriptengine-common.json`：9 个条目
 - `autogo-scriptengine-android.json`：5513 个条目
 - `autogo-scriptengine-ios.json`：5306 个条目
-- `autogo-scriptengine-lrappsoft.json`：170 个条目
+- `autogo-scriptengine-lrappsoft.json`：167 个条目
 
 ## 重新生成
 

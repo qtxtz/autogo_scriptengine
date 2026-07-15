@@ -507,6 +507,10 @@ func main() {
 
 当前 Lua 引擎依赖 `github.com/ZingYao/go-lua-vm v1.1.0`，可以把本仓库生成的 builtin docs JSON 导入 `gluals`、VS Code 或 JetBrains，以获得 AutoGo/Lua 扩展方法补全、签名提示和中文悬浮文档。
 
+GLua 扩展自身已经内置 Lua 标准库和 GLua 语法糖提示，包括 `coroutine.*`、`debug.*`、`io.*`、`math.*`、`os.*`、`string.*`、`table.*`、`utf8.*`、`glua.*`、`glua.json.*`、`glua.yaml.*`、`glua.toml.*`、`glua.codec.*`、`glua.hash.*`、`glua.path.*`、`glua.regex.*`、`glua.uuid.*`、`glua.zip.*`、`glua.event.*`、`cjson.*`、`lpeg.*`、`socket.*` 等。本仓库生成的 JSON 只补 AutoGo ScriptEngine 自己暴露的方法。
+
+生成器会读取 `go-lua-vm` 自带的 `builtin-functions.json`，如果本项目方法与 GLua 内置名称重叠，会自动跳过本项目条目，避免覆盖 GLua 官方提示。当前 lrappsoft 兼容模块中的 `math.tointeger`、`math.type`、`math.ult` 使用 GLua 内置提示，不在本仓库 JSON 中重复提供。
+
 生成文件位于：
 
 - `docs/glua_builtin_docs/autogo-scriptengine-common.json`：Lua 引擎公共全局函数和核心 table。

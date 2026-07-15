@@ -146,6 +146,11 @@ func run(root string, outDir string) error {
 	}
 
 	docs, _ := collectDocs(root, files, externalIndexes{})
+	upstreamBuiltins, err := loadGoLuaVMBuiltins()
+	if err != nil {
+		return fmt.Errorf("load go-lua-vm builtin docs: %w", err)
+	}
+	filterBuiltinOverlaps(docs, upstreamBuiltins)
 	if err := os.MkdirAll(filepath.Join(root, outDir), 0o755); err != nil {
 		return err
 	}
@@ -154,6 +159,45 @@ func run(root string, outDir string) error {
 		return err
 	}
 	return writeReadme(filepath.Join(root, outDir, "README.md"), generated)
+}
+
+func loadGoLuaVMBuiltins() (map[string]struct{}, error) {
+	dir, err := goListDependencyDir("github.com/ZingYao/go-lua-vm")
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(dir, "vscode", "extensions", "glua-lsp", "server", "builtin-functions.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var payload struct {
+		Functions map[string]json.RawMessage `json:"functions"`
+	}
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, err
+	}
+	result := make(map[string]struct{}, len(payload.Functions))
+	for name := range payload.Functions {
+		result[name] = struct{}{}
+	}
+	return result, nil
+}
+
+func filterBuiltinOverlaps(docs map[string][]functionDoc, upstream map[string]struct{}) {
+	if len(upstream) == 0 {
+		return
+	}
+	for bucket, items := range docs {
+		filtered := items[:0]
+		for _, item := range items {
+			if _, exists := upstream[item.Name]; exists {
+				continue
+			}
+			filtered = append(filtered, item)
+		}
+		docs[bucket] = filtered
+	}
 }
 
 func parseSourceFiles(root string) ([]sourceFile, error) {
@@ -676,7 +720,7 @@ func (indexes externalIndexes) indexForImport(importPath string) functionIndex {
 		return index
 	}
 	index := functionIndex{decls: map[string]*ast.FuncType{}, methods: map[string]*ast.FuncType{}}
-	dir, err := goListDir(importPath)
+	dir, err := goListModuleDir(importPath)
 	if err != nil {
 		indexes[importPath] = index
 		return index
@@ -707,8 +751,17 @@ func (indexes externalIndexes) indexForImport(importPath string) functionIndex {
 	return index
 }
 
-func goListDir(importPath string) (string, error) {
+func goListModuleDir(importPath string) (string, error) {
 	cmd := exec.Command("go", "list", "-f", "{{.Dir}}", importPath)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+func goListDependencyDir(modulePath string) (string, error) {
+	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", modulePath)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
