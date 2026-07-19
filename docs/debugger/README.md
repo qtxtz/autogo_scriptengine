@@ -4,7 +4,7 @@ AutoGo ScriptEngine Debugger v1.0.0 已发布，项目地址：
 
 <https://github.com/ZingYao/autogo_scriptengine_debugger/releases/tag/v1.0.0>
 
-当前推荐使用 VSCode 或 JetBrains 插件中的 AutoGo Debugger。插件已经内置调试工具能力，通常不需要再手动下载命令行工具。
+当前推荐使用 VSCode 或 JetBrains 插件中的 AutoGo Debugger。插件已经内置调试能力，普通脚本开发不需要手动下载命令行工具。
 
 ## 当前支持范围
 
@@ -88,13 +88,9 @@ IDE 插件在启动 Lua/GLua 调试时会完成以下工作：
 examples/lua_engine/debugger
 ```
 
-## 独立工具下载
+## 工具版本
 
-IDE 插件已内置 debugger 使用路径。以下场景才需要单独下载 Release：
-
-- 需要在终端中独立运行 TUI/CLI 工具。
-- 需要验证 debugger 工具自身行为。
-- IDE 插件不可用，需要临时使用命令行流程。
+IDE 插件已内置 debugger 使用路径。只有在需要核对插件内置 debugger 版本或排查工具自身问题时，才需要查看独立 Release。
 
 Release 下载地址：
 
@@ -133,4 +129,3 @@ chmod +x AutoGoScriptEngineDebugger*
 ### 截图中为什么没有真实路径？
 
 文档截图已做脱敏处理。实际 IDE 中会显示你的本地项目路径、设备序列号和运行目录；对外反馈问题时请同样打码这些信息。
-

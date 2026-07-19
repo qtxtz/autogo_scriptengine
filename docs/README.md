@@ -36,7 +36,7 @@ AutoGo Debugger v1.0.0 已集成到 VSCode 和 JetBrains 插件中。当前 Debu
 - JetBrains：通过 AutoGo 菜单、工具栏或运行配置调试当前 `.lua` / `.glua` 文件。
 - 两端都使用 IDE 原生 Debug UI 展示断点、调用栈、变量和日志。
 
-独立 Release 工具仍可用于终端 TUI/CLI 场景，但普通脚本开发优先使用 IDE 插件。
+普通脚本开发使用 IDE 插件入口；Debugger 文档只描述 Lua/GLua DAP 调试能力。
 
 ## 安装
 
