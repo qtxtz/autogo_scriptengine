@@ -4,7 +4,7 @@
 
 为 `lua_engine` 增加语言级 Debug 能力，使 AutoGo Lua 脚本可以在 Android 与 iOS 运行环境中支持断点、暂停、恢复、单步、异常定位和变量查看。
 
-当前仓库已有快速调试工具文档，但现有能力主要是脚本运行、日志查看、暂停/恢复/停止进程级控制。该规划面向 Lua VM 级调试，不替代现有调试器，而是为现有调试器提供底层 Debug Core。
+当前仓库已有 AutoGo Debugger 文档。该规划面向 Lua VM 级调试，不替代现有调试器，而是为 VSCode 与 JetBrains 插件中的 AutoGo Debugger 提供底层 Debug Core。
 
 ## 2. 非目标
 
@@ -16,7 +16,7 @@
 
 ## 3. 技术基础
 
-Lua 引擎基于 `github.com/yuin/gopher-lua`。可以通过 Lua VM hook 在执行行、调用、返回等事件时获得调试回调，从而实现：
+Lua 引擎基于 `github.com/zing/go-lua-vm`。可以通过 Lua VM hook 在执行行、调用、返回等事件时获得调试回调，从而实现：
 
 - 行号命中检查。
 - 断点暂停。
@@ -179,9 +179,9 @@ Debug Core 放在 `lua_engine` 通用层，不区分 Android/iOS。
 
 因此 Debug Core 不允许依赖 Android-only 或 iOS-only 模块。
 
-## 11. 与现有快速调试工具的关系
+## 11. 与 AutoGo Debugger 的关系
 
-现有 `autogo_scriptengine_debugger` 可以作为上层 UI 使用 Debug Core：
+现有 `autogo_scriptengine_debugger` 可以作为 VSCode 与 JetBrains 插件的上层调试工具使用 Debug Core：
 
 - TUI 显示运行状态、断点列表、当前行、调用栈。
 - 通过设备日志或 RPC/WebSocket 接收 `DebugEvent`。
@@ -240,7 +240,7 @@ Debug Core 放在 `lua_engine` 通用层，不区分 Android/iOS。
 - [ ] 支持暂停、继续、单步、停止。
 - [ ] 支持事件订阅。
 - [ ] 支持表达式求值。
-- [ ] 在快速调试工具中接入 TUI 控制。
+- [ ] 在 AutoGo Debugger 中接入远程调试控制。
 
 验收：
 
@@ -273,4 +273,4 @@ Debug Core 放在 `lua_engine` 通用层，不区分 Android/iOS。
 - 第一阶段是否只支持主线程，协程统一视为后续能力。
 - 断点文件路径以工程相对路径为准，还是以设备端绝对路径为准。
 - 脚本暂停时，AutoGo 宿主是否允许长时间阻塞。
-- 快速调试工具与运行中脚本之间优先使用 WebSocket、ADB 日志轮询还是本地 RPC。
+- AutoGo Debugger 与运行中脚本之间优先使用 WebSocket、ADB 日志轮询还是本地 RPC。

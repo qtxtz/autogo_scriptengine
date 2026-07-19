@@ -19,44 +19,24 @@
 - **风格包支持**：提供 autogo 和 lrappsoft 两种风格包
 - **懒人脚本兼容**：lrappsoft 风格包兼容大部分懒人脚本的 Lua 方法
 - **文档生成**：可自动生成 API 文档
-- **快速调试工具**：提供现代化的 TUI 界面和强大的调试功能
+- **IDE 调试支持**：VSCode 和 JetBrains 插件已集成 AutoGo Debugger，当前支持 Lua/GLua DAP 断点调试
 
-## 快速调试工具
+## AutoGo Debugger
 
-我们提供了一个现代化的 AutoGo ScriptEngine 开发调试工具，为开发者提供友好的 TUI 界面和强大的调试功能，大大提高开发效率。
+AutoGo Debugger v1.0.0 已集成到 VSCode 和 JetBrains 插件中。当前 Debugger 只支持 Lua/GLua 代码的 DAP 断点调试；JavaScript 代码支持运行、部署和日志查看，暂不支持断点调试。
 
-### 功能特性
+### 推荐入口
 
-- **现代化 TUI 界面**：直观的终端用户界面，实时日志输出显示，支持鼠标操作，彩色语法高亮
-- **核心功能**：项目管理、设备管理、脚本运行、实时调试、AG 管理
-- **开发工具**：代码风格支持（AutoGo、LrAppSoft、NodeJS），自动生成项目模板，配置文件管理，多设备支持
-- **跨平台支持**：Windows (AMD64)、macOS (ARM64 - M1/M2/M3)、macOS (AMD64 - Intel)
+- [AutoGo Debugger 使用说明](debugger/README.md)
+- [Debugger v1.0.0 Release](https://github.com/ZingYao/autogo_scriptengine_debugger/releases/tag/v1.0.0)
 
-### 下载地址
+### IDE 能力
 
-**GitHub 仓库**：[https://github.com/ZingYao/autogo_scriptengine_debugger.git](https://github.com/ZingYao/autogo_scriptengine_debugger.git)
+- VSCode：通过 AutoGo Activity Bar 运行或调试当前 `.lua` / `.glua` 文件。
+- JetBrains：通过 AutoGo 菜单、工具栏或运行配置调试当前 `.lua` / `.glua` 文件。
+- 两端都使用 IDE 原生 Debug UI 展示断点、调用栈、变量和日志。
 
-### 安装方法
-
-1. **从 Release 下载**：访问 GitHub Releases 页面下载对应平台的版本
-2. **从源码构建**：克隆仓库并使用 Go 1.21+ 编译
-
-### 快速开始
-
-1. **启动程序**：运行 `AutoGoScriptEngineDebugger`
-2. **初始化项目**：按 i 键选择"项目初始化"
-3. **连接设备**：进入"设备管理"选择要使用的设备
-4. **运行脚本**：将脚本文件放到项目目录的 scripts/ 文件夹，然后选择"运行脚本"
-
-### 主要功能
-
-- **项目管理**：初始化、编译、部署 AutoGo 项目
-- **设备管理**：自动检测设备、连接设备、获取设备信息
-- **脚本运行**：支持 Lua 和 JavaScript 脚本
-- **实时调试**：日志输出、暂停、恢复、停止脚本
-- **AG 管理**：自动下载和更新 AutoGo 工具
-
-这个调试工具将大大简化您的开发流程，让您可以更专注于脚本逻辑的编写和调试。
+独立 Release 工具仍可用于终端 TUI/CLI 场景，但普通脚本开发优先使用 IDE 插件。
 
 ## 安装
 
